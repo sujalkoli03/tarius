@@ -31,7 +31,7 @@ export default function Hero() {
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Link
-              href="#products"
+              href="products"
               className="btn-tarius w-full sm:w-auto"
             >
               Discover TARIUS
