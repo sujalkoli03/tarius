@@ -6,7 +6,7 @@ interface Pillar {
   desc: string;
 }
 
-export default function Quality() {
+export default function Quality(props: { id?: string }) {
   const pillars: Pillar[] = [
     {
       num: "01",
@@ -26,7 +26,7 @@ export default function Quality() {
   ];
 
   return (
-    <section id="provenance" className="section-tarius bg-[var(--tarius-graphite)] text-[var(--tarius-white)]">
+    <section id={props.id} className="section-tarius bg-[var(--tarius-graphite)] text-[var(--tarius-white)]">
       <div className="container-tarius">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-20">
           <div>

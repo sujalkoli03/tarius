@@ -6,7 +6,7 @@ interface FaqItem {
   a: string;
 }
 
-export default function Faq() {
+export default function Faq(props: { id?: string }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const faqs: FaqItem[] = [
@@ -33,7 +33,7 @@ export default function Faq() {
   };
 
   return (
-    <section id="faq" className="section-tarius bg-[var(--tarius-ivory)]">
+    <section id={props.id} className="section-tarius bg-[var(--tarius-ivory)]">
       <div className="container-tarius max-w-4xl mx-auto">
         <div className="text-center mb-16">
           <span className="text-eyebrow text-[var(--tarius-olive)] mb-4 block">Inquiries</span>

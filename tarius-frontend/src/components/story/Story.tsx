@@ -1,9 +1,9 @@
 import Link from "next/link";
 
-export default function Story() {
+export default function Story({ id }: { id: string }) {
   return (
     <section
-      id="story"
+      id={id}
       className="section-tarius overflow-hidden bg-[var(--tarius-ivory-deep)]"
     >
       <div className="container-tarius">

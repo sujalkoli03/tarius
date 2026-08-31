@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 
-export default function Contact() {
+export default function Contact(props: { id?: string }) {
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -33,7 +33,7 @@ export default function Contact() {
   };
 
   return (
-    <section id="concierge" className="section-tarius bg-[var(--tarius-graphite)] text-[var(--tarius-white)] relative overflow-hidden py-24 sm:py-32">
+    <section id={props.id} className="section-tarius bg-[var(--tarius-graphite)] text-[var(--tarius-white)] relative overflow-hidden py-24 sm:py-32">
       
       {/* Background Glow */}
       <div className="absolute top-1/2 right-1/4 w-[500px] h-[500px] bg-[var(--tarius-champagne)]/5 rounded-full blur-[120px] pointer-events-none"></div>

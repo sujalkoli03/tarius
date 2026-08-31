@@ -13,10 +13,10 @@ export default function Home() {
 
       <main>
         <Hero />
-        <Story />
-        <Quality />
-        <Faq />
-        <Contact />
+        <Story id="story" />
+        <Quality id="quality" />
+        <Faq id="faq" />
+        <Contact id="contact" />
       </main>
     </>
   );
