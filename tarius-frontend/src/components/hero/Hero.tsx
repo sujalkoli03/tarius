@@ -14,7 +14,7 @@ export default function Hero() {
           </p>
 
           <h1 className="text-display mt-6 text-[clamp(4rem,10vw,9rem)] leading-[0.82] text-[var(--tarius-graphite)]">
-            Pure.
+            Organic.
             <br />
             Powerful.
             <br />
