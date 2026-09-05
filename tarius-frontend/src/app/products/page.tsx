@@ -19,7 +19,7 @@ const products: Product[] = [
     price: "$68",
     description: "Cultivated in mineral-dense spring waters and low-temperature cryo-milled below 35°C, preserving up to 98% of active live enzymes and phytonutrients.",
     notes: "300g / 60 Servings — Biophotonic Violet Glass",
-    image: "/images/spirulina.jpg" // Place your image inside public/images/
+    image: "/spirulina powder.jpg" // Place your image inside public/images/
   },
   {
     id: "moringa",
@@ -28,7 +28,7 @@ const products: Product[] = [
     price: "$54",
     description: "Sourced from high-altitude ancestral trees, meticulously shade-dried to lock in maximum chlorophyll, amino acids, and cellular antioxidants.",
     notes: "250g / 50 Servings — Biophotonic Violet Glass",
-    image: "/images/moringa.jpg" // Place your image inside public/images/
+    image: "/Moringa Powder HD2.jpg" // Place your image inside public/images/
   }
 ];
 
