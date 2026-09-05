@@ -34,6 +34,7 @@ export default function Contact(props: { id?: string }) {
     expectedSalary: '',
     qualifications: '',
     tentativeJoiningDate: '',
+    resumeFile: null as File | null,
 
     // Quality Complaint
     invoiceFile: null as File | null,
@@ -61,7 +62,7 @@ export default function Contact(props: { id?: string }) {
     }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'invoiceFile' | 'productPhoto' | 'batchPhoto') => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'invoiceFile' | 'productPhoto' | 'batchPhoto' | 'resumeFile') => {
     if (e.target.files && e.target.files[0]) {
       setFormData(prev => ({ ...prev, [field]: e.target.files![0] }));
     }
@@ -90,7 +91,7 @@ export default function Contact(props: { id?: string }) {
         giftingProducts: { spirulina: false, moringa: false },
         spirulinaQty: '1', moringaQty: '1', deliveryDate: '', deliveryTime: '', deliveryLocation: '',
         socialHandle: '', collaborationReason: '', collabProducts: '', eventDate: '', eventTime: '',
-        position: '', expectedSalary: '', qualifications: '', tentativeJoiningDate: '',
+        position: '', expectedSalary: '', qualifications: '', tentativeJoiningDate: '', resumeFile: null,
         invoiceFile: null, productPhoto: null, batchPhoto: null,
         feedbackProducts: [], purchasePlatform: '', purchaseDate: ''
       });
@@ -212,7 +213,7 @@ export default function Contact(props: { id?: string }) {
                         <div className="flex items-center justify-between gap-4">
                           <label className="flex items-center gap-3 text-sm font-light text-stone-300 cursor-pointer">
                             <input type="checkbox" checked={formData.giftingProducts.spirulina} onChange={() => handleCheckboxChange('spirulina')} className="accent-[var(--tarius-champagne)]" />
-                            Spirulina Reserve ($68)
+                            Spirulina Reserve
                           </label>
                           {formData.giftingProducts.spirulina && (
                             <input type="number" name="spirulinaQty" min="1" value={formData.spirulinaQty} onChange={handleChange} className="w-20 bg-transparent border-b border-[var(--tarius-champagne)]/30 px-2 py-1 text-sm text-[var(--tarius-white)]" placeholder="Qty" />
@@ -222,7 +223,7 @@ export default function Contact(props: { id?: string }) {
                         <div className="flex items-center justify-between gap-4">
                           <label className="flex items-center gap-3 text-sm font-light text-stone-300 cursor-pointer">
                             <input type="checkbox" checked={formData.giftingProducts.moringa} onChange={() => handleCheckboxChange('moringa')} className="accent-[var(--tarius-champagne)]" />
-                            Wild Botanical Moringa ($54)
+                            Wild Botanical Moringa
                           </label>
                           {formData.giftingProducts.moringa && (
                             <input type="number" name="moringaQty" min="1" value={formData.moringaQty} onChange={handleChange} className="w-20 bg-transparent border-b border-[var(--tarius-champagne)]/30 px-2 py-1 text-sm text-[var(--tarius-white)]" placeholder="Qty" />
@@ -285,8 +286,8 @@ export default function Contact(props: { id?: string }) {
                             <input type="text" name="position" value={formData.position} onChange={handleChange} placeholder="Role title" className="w-full bg-transparent border-b border-[var(--tarius-champagne)]/30 py-2 text-sm text-[var(--tarius-white)]" />
                           </div>
                           <div>
-                            <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-1">Expected Salary (PA Range)</label>
-                            <input type="text" name="expectedSalary" value={formData.expectedSalary} onChange={handleChange} placeholder="e.g. $80,000 - $100,000" className="w-full bg-transparent border-b border-[var(--tarius-champagne)]/30 py-2 text-sm text-[var(--tarius-white)]" />
+                            <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-1">Expected Compensation Tier</label>
+                            <input type="text" name="expectedSalary" value={formData.expectedSalary} onChange={handleChange} placeholder="e.g. Competitive / Negotiable" className="w-full bg-transparent border-b border-[var(--tarius-champagne)]/30 py-2 text-sm text-[var(--tarius-white)]" />
                           </div>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -298,6 +299,10 @@ export default function Contact(props: { id?: string }) {
                             <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-1">Tentative Joining Date</label>
                             <input type="date" name="tentativeJoiningDate" value={formData.tentativeJoiningDate} onChange={handleChange} className="w-full bg-transparent border-b border-[var(--tarius-champagne)]/30 py-2 text-sm text-[var(--tarius-white)]" />
                           </div>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-1">Resume / CV (Optional)</label>
+                          <input type="file" accept="image/*,.pdf,.doc,.docx" onChange={(e) => handleFileChange(e, 'resumeFile')} className="w-full text-xs text-stone-400 file:mr-2 file:py-1 file:px-2 file:border-0 file:text-[10px] file:bg-[var(--tarius-champagne)] file:text-[var(--tarius-graphite)] cursor-pointer" />
                         </div>
                       </div>
                     )}
