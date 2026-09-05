@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Hero() {
   return (
@@ -48,22 +49,14 @@ export default function Hero() {
 
         {/* Visual */}
         <div className="relative">
-          <div className="image-tarius relative aspect-[4/5] min-h-[420px] w-full bg-[var(--tarius-ivory-deep)] sm:min-h-[520px] lg:min-h-0">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <span className="font-display text-7xl font-medium text-[var(--tarius-olive)]/30 sm:text-8xl">
-                  T
-                </span>
-
-                <p className="text-eyebrow mt-3 text-[var(--tarius-graphite-soft)]/60">
-                  TARIUS
-                </p>
-
-                <p className="mt-2 font-display text-xl italic text-[var(--tarius-graphite-soft)]/60">
-                  Nature, refined.
-                </p>
-              </div>
-            </div>
+          <div className="image-tarius relative aspect-[4/5] min-h-[420px] w-full overflow-hidden bg-[var(--tarius-ivory-deep)] sm:min-h-[520px] lg:min-h-0">
+            <Image
+              src="/spirulina powder.jpg"
+              alt="Moringa Powder"
+              fill
+              priority
+              className="object-cover"
+            />
           </div>
 
           {/* Decorative detail */}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Story({ id }: { id: string }) {
   return (
@@ -10,23 +11,18 @@ export default function Story({ id }: { id: string }) {
         <div className="grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
           {/* Visual */}
           <div className="order-2 lg:order-1">
-            <div className="image-tarius relative aspect-[4/5] bg-[var(--tarius-olive)]/10">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <span className="font-display text-[10rem] font-medium leading-none text-[var(--tarius-olive)]/20 sm:text-[13rem]">
-                    T
-                  </span>
-
-                  <p className="text-eyebrow mt-4 text-[var(--tarius-graphite-soft)]/60">
-                    Rooted in nature
-                  </p>
-                </div>
-              </div>
+            <div className="image-tarius relative aspect-[4/5] overflow-hidden bg-[var(--tarius-olive)]/15">
+              <Image
+                src="/Moringa Powder HD2.jpg"
+                alt="Moringa Powder and Leaves"
+                fill
+                className="object-cover"
+              />
 
               {/* Decorative botanical lines */}
-              <div className="absolute left-6 top-6 h-16 w-16 border-l border-t border-[var(--tarius-champagne)]" />
+              <div className="absolute left-6 top-6 z-10 h-16 w-16 border-l border-t border-[var(--tarius-champagne)]" />
 
-              <div className="absolute bottom-6 right-6 h-16 w-16 border-b border-r border-[var(--tarius-champagne)]" />
+              <div className="absolute bottom-6 right-6 z-10 h-16 w-16 border-b border-r border-[var(--tarius-champagne)]" />
             </div>
           </div>
 
