@@ -2,9 +2,12 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { submitContactForm } from '@/lib/api';
 
 export default function Contact(props: { id?: string }) {
   const [submitted, setSubmitted] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const [selectedInquiry, setSelectedInquiry] = useState<string>('');
   
   const [formData, setFormData] = useState({
@@ -80,22 +83,103 @@ export default function Contact(props: { id?: string }) {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const resetForm = () => {
+    setFormData({
+      name: '', email: '', phone: '', preferredContact: 'email', message: '',
+      giftingProducts: { spirulina: false, moringa: false },
+      spirulinaQty: '1', moringaQty: '1', deliveryDate: '', deliveryTime: '', deliveryLocation: '',
+      socialHandle: '', collaborationReason: '', collabProducts: '', eventDate: '', eventTime: '',
+      position: '', expectedSalary: '', qualifications: '', tentativeJoiningDate: '', resumeFile: null,
+      invoiceFile: null, productPhoto: null, batchPhoto: null,
+      feedbackProducts: [], purchasePlatform: '', purchaseDate: ''
+    });
+  };
+
+  const buildFormData = (): FormData => {
+    const payload = new FormData();
+    payload.append('inquiryType', selectedInquiry);
+    payload.append('name', formData.name);
+    payload.append('email', formData.email);
+    payload.append('phone', formData.phone);
+    payload.append('preferredContact', formData.preferredContact);
+    payload.append('message', formData.message);
+
+    if (selectedInquiry === 'gifting') {
+      payload.append('giftingProductsSpirulina', String(formData.giftingProducts.spirulina));
+      payload.append('giftingProductsMoringa', String(formData.giftingProducts.moringa));
+      payload.append('spirulinaQty', formData.spirulinaQty);
+      payload.append('moringaQty', formData.moringaQty);
+      payload.append('deliveryDate', formData.deliveryDate);
+      payload.append('deliveryTime', formData.deliveryTime);
+      payload.append('deliveryLocation', formData.deliveryLocation);
+    }
+
+    if (selectedInquiry === 'collab' || selectedInquiry === 'press') {
+      payload.append('socialHandle', formData.socialHandle);
+      payload.append('collabProducts', formData.collabProducts);
+      payload.append('eventDate', formData.eventDate);
+      payload.append('eventTime', formData.eventTime);
+      payload.append('collaborationReason', formData.collaborationReason);
+    }
+
+    if (selectedInquiry === 'careers') {
+      payload.append('position', formData.position);
+      payload.append('expectedSalary', formData.expectedSalary);
+      payload.append('qualifications', formData.qualifications);
+      payload.append('tentativeJoiningDate', formData.tentativeJoiningDate);
+      if (formData.resumeFile) {
+        payload.append('resumeFile', formData.resumeFile);
+      }
+    }
+
+    if (selectedInquiry === 'quality') {
+      if (formData.invoiceFile) {
+        payload.append('invoiceFile', formData.invoiceFile);
+      }
+      if (formData.productPhoto) {
+        payload.append('productPhoto', formData.productPhoto);
+      }
+      if (formData.batchPhoto) {
+        payload.append('batchPhoto', formData.batchPhoto);
+      }
+    }
+
+    if (selectedInquiry === 'feedback') {
+      payload.append('feedbackProducts', formData.feedbackProducts.join(','));
+      payload.append('purchasePlatform', formData.purchasePlatform);
+      payload.append('purchaseDate', formData.purchaseDate);
+    }
+
+    return payload;
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
+
+    if (isSubmitting || !selectedInquiry) {
+      return;
+    }
+
+    setErrorMessage('');
+    setIsSubmitting(true);
+
+    try {
+      await submitContactForm(buildFormData());
+      setSubmitted(true);
       setSelectedInquiry('');
-      setFormData({
-        name: '', email: '', phone: '', preferredContact: 'email', message: '',
-        giftingProducts: { spirulina: false, moringa: false },
-        spirulinaQty: '1', moringaQty: '1', deliveryDate: '', deliveryTime: '', deliveryLocation: '',
-        socialHandle: '', collaborationReason: '', collabProducts: '', eventDate: '', eventTime: '',
-        position: '', expectedSalary: '', qualifications: '', tentativeJoiningDate: '', resumeFile: null,
-        invoiceFile: null, productPhoto: null, batchPhoto: null,
-        feedbackProducts: [], purchasePlatform: '', purchaseDate: ''
-      });
-    }, 5000);
+      resetForm();
+      setTimeout(() => {
+        setSubmitted(false);
+      }, 5000);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to submit your inquiry at the moment. Please try again later.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -142,6 +226,19 @@ export default function Contact(props: { id?: string }) {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+                {/* Honeypot spam trap (hidden from human users) */}
+                <div className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
+                  <label htmlFor="website">Website</label>
+                  <input
+                    type="text"
+                    name="website"
+                    id="website"
+                    value=""
+                    onChange={() => {}}
+                    tabIndex={-1}
+                    autoComplete="off"
+                  />
+                </div>
                 
                 {/* Main Nature of Inquiry Dropdown */}
                 <div className="relative">
@@ -370,11 +467,27 @@ export default function Contact(props: { id?: string }) {
                     </div>
 
                     {/* Submit Button */}
+                    {errorMessage && (
+                      <div
+                        role="alert"
+                        className="mt-4 border border-red-800/40 bg-red-900/10 px-4 py-3 text-xs leading-relaxed text-red-300"
+                      >
+                        {errorMessage}
+                      </div>
+                    )}
+
                     <button 
                       type="submit" 
-                      className="w-full border border-[var(--tarius-champagne)] text-[var(--tarius-champagne)] py-4 mt-6 font-sans text-xs tracking-[0.15em] uppercase hover:bg-[var(--tarius-champagne)] hover:text-[var(--tarius-graphite)] transition-all duration-300 cursor-pointer shadow-lg"
+                      disabled={isSubmitting}
+                      className="w-full border border-[var(--tarius-champagne)] text-[var(--tarius-champagne)] py-4 mt-6 font-sans text-xs tracking-[0.15em] uppercase hover:bg-[var(--tarius-champagne)] hover:text-[var(--tarius-graphite)] transition-all duration-300 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-[var(--tarius-champagne)] shadow-lg flex items-center justify-center gap-3"
                     >
-                      Submit Application
+                      {isSubmitting && (
+                        <span
+                          aria-hidden="true"
+                          className="inline-block h-3 w-3 animate-spin rounded-full border border-[var(--tarius-champagne)] border-t-transparent"
+                        />
+                      )}
+                      {isSubmitting ? 'Submitting...' : 'Submit Application'}
                     </button>
 
                   </div>
