@@ -17,13 +17,17 @@ const FRONTEND_URL =
 app.use(helmet());
 
 // CORS
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://tarius-git-dev-integration-sujal-s-projects5.vercel.app",
+];
+
 app.use(
   cors({
-    origin: FRONTEND_URL,
+    origin: allowedOrigins,
     credentials: true,
   })
 );
-
 // Body parsing
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
