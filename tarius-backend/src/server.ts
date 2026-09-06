@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import helmet from "helmet";
 import morgan from "morgan";
+import contactRoutes from "./routes/contact.routes.js";
 
 dotenv.config();
 
@@ -38,6 +39,33 @@ app.get("/api/health", (_req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Contact routes
+app.use("/api/contact", contactRoutes);
+
+// JSON 404 fallback for unknown API routes
+app.use("/api", (_req, res) => {
+  res.status(404).json({
+    success: false,
+    message: "Endpoint not found.",
+  });
+});
+
+// Global JSON error handler (prevents raw HTML error pages from leaking)
+app.use(
+  (
+    err: Error,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction
+  ) => {
+    console.error("Unhandled error:", err);
+    res.status(500).json({
+      success: false,
+      message: "An unexpected error occurred. Please try again later.",
+    });
+  }
+);
 
 // Start server
 app.listen(PORT, () => {
