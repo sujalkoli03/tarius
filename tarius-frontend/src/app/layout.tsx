@@ -6,7 +6,7 @@ import Footer from "@/components/footer/Footer";
 
 export const metadata: Metadata = {
   title: {
-    default: "TARIUS — Pure. Powerful. Natural.",
+    default: "TARIUS — Organic. Powerful. Natural.",
     template: "%s | TARIUS",
   },
   description:

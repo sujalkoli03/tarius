@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 const navigation = [
   { label: "Shop", href: "/products" },
@@ -20,17 +21,24 @@ export default function Navbar() {
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-[var(--tarius-border)] bg-[var(--tarius-ivory)]/95 backdrop-blur-md">
       <nav
-        className="container-tarius flex h-[76px] items-center justify-between"
+        className="container-tarius flex h-[96px] items-center justify-between"
         aria-label="Main navigation"
       >
         {/* Logo */}
         <Link
           href="/"
           onClick={closeMenu}
-          className="font-display text-3xl font-semibold tracking-[0.08em] text-[var(--tarius-graphite)]"
+          className="flex items-center"
           aria-label="TARIUS home"
         >
-          TARIUS
+          <Image
+            src="/LOGO_TARIUS.png"
+            alt="TARIUS"
+            width={660}
+            height={200}
+            priority
+            className="h-[114px] w-auto max-w-[400px] object-contain sm:max-w-none"
+          />
         </Link>
 
         {/* Desktop Navigation */}

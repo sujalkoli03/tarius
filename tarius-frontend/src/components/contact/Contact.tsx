@@ -3,12 +3,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { supabase } from '@/lib/api';
+import Link from 'next/link';
 
 export default function Contact(props: { id?: string }) {
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [selectedInquiry, setSelectedInquiry] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -17,6 +16,7 @@ export default function Contact(props: { id?: string }) {
     preferredContact: 'email',
     message: '',
     
+    // Gifting
     giftingProducts: { spirulina: false, moringa: false },
     spirulinaQty: '1',
     moringaQty: '1',
@@ -24,17 +24,27 @@ export default function Contact(props: { id?: string }) {
     deliveryTime: '',
     deliveryLocation: '',
 
+    // Collaboration / Press
     socialHandle: '',
     collaborationReason: '',
     collabProducts: '',
     eventDate: '',
     eventTime: '',
 
+    // Careers
     position: '',
     expectedSalary: '',
     qualifications: '',
     tentativeJoiningDate: '',
+    resumeFile: null as File | null,
 
+    // Quality Complaint
+    invoiceFile: null as File | null,
+    productPhoto: null as File | null,
+    batchPhoto: null as File | null,
+
+    // General Feedback
+    feedbackProducts: [] as string[],
     purchasePlatform: '',
     purchaseDate: '',
   });
@@ -54,57 +64,40 @@ export default function Contact(props: { id?: string }) {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    const detailedNotes = `
-Type: ${selectedInquiry}
-Phone: ${formData.phone || 'N/A'}
-Preferred Contact: ${formData.preferredContact}
----
-Details / Message:
-${formData.message}
----
-Additional Meta:
-- Gifting: Spirulina (${formData.giftingProducts.spirulina ? formData.spirulinaQty : 'No'}), Moringa (${formData.giftingProducts.moringa ? formData.moringaQty : 'No'})
-- Delivery: ${formData.deliveryDate} @ ${formData.deliveryTime} (${formData.deliveryLocation})
-- Social/Press: ${formData.socialHandle} | Products: ${formData.collabProducts}
-- Careers: Position (${formData.position}), Exp. Salary (${formData.expectedSalary}), Joining (${formData.tentativeJoiningDate})
-- Feedback/Purchase: Platform (${formData.purchasePlatform}), Date (${formData.purchaseDate})
-    `.trim();
-
-    const { error } = await supabase.from('Inquiry').insert([
-      {
-        name: formData.name,
-        email: formData.email,
-        preferredContact: formData.preferredContact,
-        tier: selectedInquiry,
-        deliveryInstructions: detailedNotes,
-        status: 'pending'
-      }
-    ]);
-
-    setIsSubmitting(false);
-
-    if (error) {
-      console.error('Error submitting inquiry:', error);
-      alert('Failed to transmit dossier. Please try again.');
-    } else {
-      setSubmitted(true);
-      setTimeout(() => {
-        setSubmitted(false);
-        setSelectedInquiry('');
-        setFormData({
-          name: '', email: '', phone: '', preferredContact: 'email', message: '',
-          giftingProducts: { spirulina: false, moringa: false },
-          spirulinaQty: '1', moringaQty: '1', deliveryDate: '', deliveryTime: '', deliveryLocation: '',
-          socialHandle: '', collaborationReason: '', collabProducts: '', eventDate: '', eventTime: '',
-          position: '', expectedSalary: '', qualifications: '', tentativeJoiningDate: '',
-          purchasePlatform: '', purchaseDate: ''
-        });
-      }, 5000);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'invoiceFile' | 'productPhoto' | 'batchPhoto' | 'resumeFile') => {
+    if (e.target.files && e.target.files[0]) {
+      setFormData(prev => ({ ...prev, [field]: e.target.files![0] }));
     }
+  };
+
+  const handleFeedbackProductToggle = (prod: string) => {
+    setFormData(prev => {
+      const exists = prev.feedbackProducts.includes(prod);
+      return {
+        ...prev,
+        feedbackProducts: exists 
+          ? prev.feedbackProducts.filter(p => p !== prod)
+          : [...prev.feedbackProducts, prod]
+      };
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSubmitted(true);
+    setTimeout(() => {
+      setSubmitted(false);
+      setSelectedInquiry('');
+      setFormData({
+        name: '', email: '', phone: '', preferredContact: 'email', message: '',
+        giftingProducts: { spirulina: false, moringa: false },
+        spirulinaQty: '1', moringaQty: '1', deliveryDate: '', deliveryTime: '', deliveryLocation: '',
+        socialHandle: '', collaborationReason: '', collabProducts: '', eventDate: '', eventTime: '',
+        position: '', expectedSalary: '', qualifications: '', tentativeJoiningDate: '', resumeFile: null,
+        invoiceFile: null, productPhoto: null, batchPhoto: null,
+        feedbackProducts: [], purchasePlatform: '', purchaseDate: ''
+      });
+    }, 5000);
   };
 
   return (
@@ -114,6 +107,7 @@ Additional Meta:
       <div className="container-tarius relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-24 items-start">
           
+          {/* Left Column */}
           <div className="lg:col-span-5 lg:sticky lg:top-12">
             <span className="text-eyebrow text-[var(--tarius-champagne)] mb-4 block tracking-[0.25em] text-xs">The Concierge</span>
             <h2 className="text-display text-4xl sm:text-5xl text-[var(--tarius-white)] mb-6 font-light leading-tight">
@@ -134,6 +128,7 @@ Additional Meta:
             </div>
           </div>
 
+          {/* Right Column: Dynamic Form */}
           <div className="lg:col-span-7">
             {submitted ? (
               <div className="py-24">
@@ -150,6 +145,7 @@ Additional Meta:
             ) : (
               <form onSubmit={handleSubmit} className="flex flex-col gap-8">
                 
+                {/* Main Nature of Inquiry Dropdown */}
                 <div className="relative">
                   <label className="block text-[var(--tarius-champagne)] font-sans text-[10px] uppercase tracking-widest mb-2">Nature of Inquiry</label>
                   <select 
@@ -178,9 +174,11 @@ Additional Meta:
                   </div>
                 </div>
 
+                {/* Conditional Dynamic Fields */}
                 {selectedInquiry && (
-                  <div className="space-y-6 pt-4 border-t border-[var(--tarius-champagne)]/10">
+                  <div className="space-y-6 pt-4 border-t border-[var(--tarius-champagne)]/10 animate-fadeIn">
                     
+                    {/* Standard Contact Fields for active selections */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div className="relative group">
                         <input 
@@ -209,6 +207,7 @@ Additional Meta:
                       </div>
                     </div>
 
+                    {/* 7. Corporate / Custom Gifting Fields */}
                     {selectedInquiry === 'gifting' && (
                       <div className="space-y-6 bg-white/[0.02] p-6 border border-[var(--tarius-champagne)]/20">
                         <p className="text-xs uppercase tracking-widest text-[var(--tarius-champagne)]">Select Products & Quantities</p>
@@ -250,6 +249,7 @@ Additional Meta:
                       </div>
                     )}
 
+                    {/* 8 & 9. Collaboration & Press Fields */}
                     {(selectedInquiry === 'collab' || selectedInquiry === 'press') && (
                       <div className="space-y-6 bg-white/[0.02] p-6 border border-[var(--tarius-champagne)]/20">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -262,9 +262,24 @@ Additional Meta:
                             <input type="text" name="collabProducts" value={formData.collabProducts} onChange={handleChange} placeholder="Spirulina / Moringa" className="w-full bg-transparent border-b border-[var(--tarius-champagne)]/30 py-2 text-sm text-[var(--tarius-white)]" />
                           </div>
                         </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-1">Tentative Date</label>
+                            <input type="date" name="eventDate" value={formData.eventDate} onChange={handleChange} className="w-full bg-transparent border-b border-[var(--tarius-champagne)]/30 py-2 text-sm text-[var(--tarius-white)]" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-1">Tentative Time</label>
+                            <input type="time" name="eventTime" value={formData.eventTime} onChange={handleChange} className="w-full bg-transparent border-b border-[var(--tarius-champagne)]/30 py-2 text-sm text-[var(--tarius-white)]" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-1">Reason for Partnership / Feature</label>
+                          <textarea name="collaborationReason" rows={3} value={formData.collaborationReason} onChange={handleChange} className="w-full bg-transparent border-b border-[var(--tarius-champagne)]/30 py-2 text-sm text-[var(--tarius-white)] resize-none" placeholder="Describe your audience or media outlet..."></textarea>
+                        </div>
                       </div>
                     )}
 
+                    {/* 10. Careers Fields */}
                     {selectedInquiry === 'careers' && (
                       <div className="space-y-6 bg-white/[0.02] p-6 border border-[var(--tarius-champagne)]/20">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -277,9 +292,72 @@ Additional Meta:
                             <input type="text" name="expectedSalary" value={formData.expectedSalary} onChange={handleChange} placeholder="e.g. Competitive / Negotiable" className="w-full bg-transparent border-b border-[var(--tarius-champagne)]/30 py-2 text-sm text-[var(--tarius-white)]" />
                           </div>
                         </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-1">Qualifications / Experience</label>
+                            <input type="text" name="qualifications" value={formData.qualifications} onChange={handleChange} placeholder="Degrees / Certifications" className="w-full bg-transparent border-b border-[var(--tarius-champagne)]/30 py-2 text-sm text-[var(--tarius-white)]" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-1">Tentative Joining Date</label>
+                            <input type="date" name="tentativeJoiningDate" value={formData.tentativeJoiningDate} onChange={handleChange} className="w-full bg-transparent border-b border-[var(--tarius-champagne)]/30 py-2 text-sm text-[var(--tarius-white)]" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-1">Resume / CV (Optional)</label>
+                          <input type="file" accept="image/*,.pdf,.doc,.docx" onChange={(e) => handleFileChange(e, 'resumeFile')} className="w-full text-xs text-stone-400 file:mr-2 file:py-1 file:px-2 file:border-0 file:text-[10px] file:bg-[var(--tarius-champagne)] file:text-[var(--tarius-graphite)] cursor-pointer" />
+                        </div>
                       </div>
                     )}
 
+                    {/* 5. Quality Complaint Fields */}
+                    {selectedInquiry === 'quality' && (
+                      <div className="space-y-6 bg-white/[0.02] p-6 border border-[var(--tarius-champagne)]/20">
+                        <p className="text-xs uppercase tracking-widest text-[var(--tarius-champagne)]">Verification Assets Required</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-stone-300">
+                          <div>
+                            <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-1">Order Invoice</label>
+                            <input type="file" accept="image/*,.pdf" onChange={(e) => handleFileChange(e, 'invoiceFile')} className="w-full text-xs text-stone-400 file:mr-2 file:py-1 file:px-2 file:border-0 file:text-[10px] file:bg-[var(--tarius-champagne)] file:text-[var(--tarius-graphite)]" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-1">Product Photo</label>
+                            <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'productPhoto')} className="w-full text-xs text-stone-400 file:mr-2 file:py-1 file:px-2 file:border-0 file:text-[10px] file:bg-[var(--tarius-champagne)] file:text-[var(--tarius-graphite)]" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-1">Batch Number Photo</label>
+                            <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'batchPhoto')} className="w-full text-xs text-stone-400 file:mr-2 file:py-1 file:px-2 file:border-0 file:text-[10px] file:bg-[var(--tarius-champagne)] file:text-[var(--tarius-graphite)]" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 11. General Feedback Fields */}
+                    {selectedInquiry === 'feedback' && (
+                      <div className="space-y-6 bg-white/[0.02] p-6 border border-[var(--tarius-champagne)]/20">
+                        <p className="text-xs uppercase tracking-widest text-[var(--tarius-champagne)]">Product(s) Reviewed (Mandatory)</p>
+                        <div className="flex gap-6">
+                          <label className="flex items-center gap-2 text-sm text-stone-300 cursor-pointer">
+                            <input type="checkbox" checked={formData.feedbackProducts.includes('Spirulina')} onChange={() => handleFeedbackProductToggle('Spirulina')} className="accent-[var(--tarius-champagne)]" />
+                            Spirulina Reserve
+                          </label>
+                          <label className="flex items-center gap-2 text-sm text-stone-300 cursor-pointer">
+                            <input type="checkbox" checked={formData.feedbackProducts.includes('Moringa')} onChange={() => handleFeedbackProductToggle('Moringa')} className="accent-[var(--tarius-champagne)]" />
+                            Wild Moringa
+                          </label>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-1">Purchased From</label>
+                            <input type="text" name="purchasePlatform" value={formData.purchasePlatform} onChange={handleChange} placeholder="Amazon / Blinkit / Direct" className="w-full bg-transparent border-b border-[var(--tarius-champagne)]/30 py-2 text-sm text-[var(--tarius-white)]" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-1">Purchase Date</label>
+                            <input type="date" name="purchaseDate" value={formData.purchaseDate} onChange={handleChange} className="w-full bg-transparent border-b border-[var(--tarius-champagne)]/30 py-2 text-sm text-[var(--tarius-white)]" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* General Message Textarea */}
                     <div className="relative group mt-4">
                       <textarea 
                         name="message" 
@@ -293,12 +371,12 @@ Additional Meta:
                       <label className="absolute left-0 top-3 text-stone-400 font-sans text-xs uppercase tracking-widest transition-all peer-focus:-top-6 peer-focus:text-[10px] peer-focus:text-[var(--tarius-champagne)] peer-valid:-top-6 peer-valid:text-[10px] peer-valid:text-stone-400 pointer-events-none">Detailed Inquiry Description</label>
                     </div>
 
+                    {/* Submit Button */}
                     <button 
                       type="submit" 
-                      disabled={isSubmitting}
-                      className="w-full border border-[var(--tarius-champagne)] text-[var(--tarius-champagne)] py-4 mt-6 font-sans text-xs tracking-[0.15em] uppercase hover:bg-[var(--tarius-champagne)] hover:text-[var(--tarius-graphite)] transition-all duration-300 cursor-pointer shadow-lg disabled:opacity-50"
+                      className="w-full border border-[var(--tarius-champagne)] text-[var(--tarius-champagne)] py-4 mt-6 font-sans text-xs tracking-[0.15em] uppercase hover:bg-[var(--tarius-champagne)] hover:text-[var(--tarius-graphite)] transition-all duration-300 cursor-pointer shadow-lg"
                     >
-                      {isSubmitting ? 'Transmitting Dossier...' : 'Submit Application'}
+                      Submit Application
                     </button>
 
                   </div>
