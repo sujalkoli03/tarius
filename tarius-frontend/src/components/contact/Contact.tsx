@@ -134,6 +134,7 @@ Additional Meta:
             </div>
           </div>
 
+
           <div className="lg:col-span-7">
             {submitted ? (
               <div className="py-24">
