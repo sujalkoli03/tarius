@@ -1,5 +1,10 @@
+// Filename: src/app/products/page.tsx
+
 import Link from "next/link";
 import { supabase } from "@/lib/api";
+
+// THIS IS THE MAGIC LINE: It tells Vercel to never cache this page
+export const dynamic = 'force-dynamic';
 
 export const metadata = {
   title: "The Collection | TARIUS",
