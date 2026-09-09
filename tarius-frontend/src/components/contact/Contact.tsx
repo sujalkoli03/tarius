@@ -61,31 +61,31 @@ export default function Contact(props: { id?: string }) {
     let metaData: string[] = [];
 
     if (selectedInquiry === 'gifting') {
-      metaData.push(`Gifting Requirements:`);
-      metaData.push(`- Spirulina: ${formData.giftingProducts.spirulina ? formData.spirulinaQty : '0'}`);
-      metaData.push(`- Moringa: ${formData.giftingProducts.moringa ? formData.moringaQty : '0'}`);
-      metaData.push(`- Delivery: ${formData.deliveryDate || 'TBD'} @ ${formData.deliveryTime || 'TBD'}`);
-      metaData.push(`- Location: ${formData.deliveryLocation || 'TBD'}`);
+      metaData.push("Gifting Requirements:");
+      metaData.push("- Spirulina: " + (formData.giftingProducts.spirulina ? formData.spirulinaQty : "0"));
+      metaData.push("- Moringa: " + (formData.giftingProducts.moringa ? formData.moringaQty : "0"));
+      metaData.push("- Delivery: " + (formData.deliveryDate || "TBD") + " @ " + (formData.deliveryTime || "TBD"));
+      metaData.push("- Location: " + (formData.deliveryLocation || "TBD"));
     } else if (selectedInquiry === 'collab' || selectedInquiry === 'press') {
-      metaData.push(`Partnership Details:`);
-      metaData.push(`- Social/URL: ${formData.socialHandle || 'N/A'}`);
-      metaData.push(`- Products Requested: ${formData.collabProducts || 'N/A'}`);
-      metaData.push(`- Event Date: ${formData.eventDate || 'N/A'} @ ${formData.eventTime || 'N/A'}`);
+      metaData.push("Partnership Details:");
+      metaData.push("- Social/URL: " + (formData.socialHandle || "N/A"));
+      metaData.push("- Products Requested: " + (formData.collabProducts || "N/A"));
+      metaData.push("- Event Date: " + (formData.eventDate || "N/A") + " @ " + (formData.eventTime || "N/A"));
     } else if (selectedInquiry === 'careers') {
-      metaData.push(`Candidate Profile:`);
-      metaData.push(`- Position: ${formData.position || 'N/A'}`);
-      metaData.push(`- Expected Salary: ${formData.expectedSalary || 'N/A'}`);
-      metaData.push(`- Qualifications: ${formData.qualifications || 'N/A'}`);
-      metaData.push(`- Joining Date: ${formData.tentativeJoiningDate || 'N/A'}`);
+      metaData.push("Candidate Profile:");
+      metaData.push("- Position: " + (formData.position || "N/A"));
+      metaData.push("- Expected Salary: " + (formData.expectedSalary || "N/A"));
+      metaData.push("- Qualifications: " + (formData.qualifications || "N/A"));
+      metaData.push("- Joining Date: " + (formData.tentativeJoiningDate || "N/A"));
     } else if (selectedInquiry === 'feedback') {
-      metaData.push(`Feedback Context:`);
-      metaData.push(`- Purchased From: ${formData.purchasePlatform || 'N/A'}`);
-      metaData.push(`- Purchase Date: ${formData.purchaseDate || 'N/A'}`);
+      metaData.push("Feedback Context:");
+      metaData.push("- Purchased From: " + (formData.purchasePlatform || "N/A"));
+      metaData.push("- Purchase Date: " + (formData.purchaseDate || "N/A"));
     }
 
     const compiledNotes = [
-      formData.phone ? `Phone: ${formData.phone}` : null,
-      `Client Message:`,
+      formData.phone ? "Phone: " + formData.phone : null,
+      "Client Message:",
       formData.message,
       ...(metaData.length > 0 ? ['--- Additional Details ---', ...metaData] : [])
     ].filter(Boolean).join('\n');
@@ -101,26 +101,44 @@ export default function Contact(props: { id?: string }) {
       }
     ]);
 
-    setIsSubmitting(false);
-
     if (error) {
       console.error('Error submitting inquiry:', error);
       alert('Failed to transmit dossier. Please try again.');
-    } else {
-      setSubmitted(true);
-      setTimeout(() => {
-        setSubmitted(false);
-        setSelectedInquiry('');
-        setFormData({
-          name: '', email: '', phone: '', preferredContact: 'email', message: '',
-          giftingProducts: { spirulina: false, moringa: false },
-          spirulinaQty: '1', moringaQty: '1', deliveryDate: '', deliveryTime: '', deliveryLocation: '',
-          socialHandle: '', collaborationReason: '', collabProducts: '', eventDate: '', eventTime: '',
-          position: '', expectedSalary: '', qualifications: '', tentativeJoiningDate: '',
-          purchasePlatform: '', purchaseDate: ''
-        });
-      }, 5000);
+      setIsSubmitting(false);
+      return;
     }
+
+    // Trigger the automated emails quietly in the background
+    try {
+      const emailPayload = {
+        ...formData,
+        tier: selectedInquiry
+      };
+      
+      await fetch('/api/contact-alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(emailPayload)
+      });
+    } catch (emailError) {
+      console.error("Email trigger failed, but data was saved.", emailError);
+    }
+
+    setIsSubmitting(false);
+    setSubmitted(true);
+    
+    setTimeout(() => {
+      setSubmitted(false);
+      setSelectedInquiry('');
+      setFormData({
+        name: '', email: '', phone: '', preferredContact: 'email', message: '',
+        giftingProducts: { spirulina: false, moringa: false },
+        spirulinaQty: '1', moringaQty: '1', deliveryDate: '', deliveryTime: '', deliveryLocation: '',
+        socialHandle: '', collaborationReason: '', collabProducts: '', eventDate: '', eventTime: '',
+        position: '', expectedSalary: '', qualifications: '', tentativeJoiningDate: '',
+        purchasePlatform: '', purchaseDate: ''
+      });
+    }, 5000);
   };
 
   return (
@@ -149,7 +167,6 @@ export default function Contact(props: { id?: string }) {
               </p>
             </div>
           </div>
-
 
           <div className="lg:col-span-7">
             {submitted ? (
