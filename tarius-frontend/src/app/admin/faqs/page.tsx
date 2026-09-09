@@ -12,6 +12,7 @@ interface FaqItem {
   order: number;
   isPublished: boolean;
   category: string | null;
+  createdAt: string;
 }
 
 export default function AdminFaqs() {
@@ -22,6 +23,9 @@ export default function AdminFaqs() {
   const [formData, setFormData] = useState<Partial<FaqItem>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [sortOption, setSortOption] = useState<string>('order-asc');
 
   useEffect(() => {
     fetchFaqs();
@@ -52,7 +56,7 @@ export default function AdminFaqs() {
     setEditingId(null);
     setIsAdding(true);
     setFormData({
-      id: `faq_${Math.random().toString(36).substr(2, 9)}`,
+      id: "faq_" + Math.random().toString(36).substr(2, 9),
       question: '',
       answer: '',
       order: faqs.length + 1,
@@ -135,6 +139,19 @@ export default function AdminFaqs() {
       await fetchFaqs();
     }
   };
+
+  const processedFaqs = faqs
+    .filter((faq) => {
+      if (filterStatus === 'published') return faq.isPublished;
+      if (filterStatus === 'draft') return !faq.isPublished;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortOption === 'order-asc') return a.order - b.order;
+      if (sortOption === 'order-desc') return b.order - a.order;
+      if (sortOption === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      return 0;
+    });
 
   if (loading) {
     return (
@@ -297,6 +314,36 @@ export default function AdminFaqs() {
         )}
       </div>
 
+      {!isAdding && (
+        <div className="flex flex-col sm:flex-row flex-wrap gap-4 mb-8 pb-6 border-b border-[var(--tarius-border)]">
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] uppercase tracking-widest text-stone-500">Filter By Status</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="bg-transparent border border-[var(--tarius-border)] px-4 py-2 text-xs text-[var(--tarius-graphite)] focus:outline-none focus:border-[var(--tarius-olive)] rounded-sm appearance-none min-w-[150px]"
+            >
+              <option value="all">All Inquiries</option>
+              <option value="published">Published</option>
+              <option value="draft">Drafts</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] uppercase tracking-widest text-stone-500">Sort By Priority</label>
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
+              className="bg-transparent border border-[var(--tarius-border)] px-4 py-2 text-xs text-[var(--tarius-graphite)] focus:outline-none focus:border-[var(--tarius-olive)] rounded-sm appearance-none min-w-[150px]"
+            >
+              <option value="order-asc">Display Order (Asc)</option>
+              <option value="order-desc">Display Order (Desc)</option>
+              <option value="newest">Newest First</option>
+            </select>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-6">
         {isAdding && (
           <div className="border border-[var(--tarius-olive)] bg-[var(--tarius-ivory-deep)] shadow-[0_10px_40px_rgba(31,33,28,0.08)] rounded-sm mb-8">
@@ -304,21 +351,17 @@ export default function AdminFaqs() {
           </div>
         )}
 
-        {!isAdding && faqs.length === 0 ? (
+        {!isAdding && processedFaqs.length === 0 ? (
           <div className="border border-[var(--tarius-border)] bg-white p-12 text-center rounded-sm">
             <p className="text-sm text-stone-500">
-              No inquiries found. Click "Add New Inquiry" to begin.
+              No inquiries match the current criteria.
             </p>
           </div>
         ) : (
-          faqs.map((faq) => (
+          processedFaqs.map((faq) => (
             <div
               key={faq.id}
-              className={`border transition-all duration-700 overflow-hidden relative rounded-sm ${
-                editingId === faq.id
-                  ? 'border-[var(--tarius-olive)] bg-[var(--tarius-ivory-deep)] shadow-[0_10px_40px_rgba(31,33,28,0.08)]'
-                  : 'border-[var(--tarius-border)] bg-white hover:border-[var(--tarius-olive)]/40 shadow-sm'
-              }`}
+              className={"border transition-all duration-700 overflow-hidden relative rounded-sm " + (editingId === faq.id ? "border-[var(--tarius-olive)] bg-[var(--tarius-ivory-deep)] shadow-[0_10px_40px_rgba(31,33,28,0.08)]" : "border-[var(--tarius-border)] bg-white hover:border-[var(--tarius-olive)]/40 shadow-sm")}
             >
               {editingId !== faq.id && (
                 <div className="p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -349,11 +392,7 @@ export default function AdminFaqs() {
                   <div className="flex flex-wrap items-center gap-6 self-start md:self-auto shrink-0">
                     <div className="flex items-center gap-3 bg-[var(--tarius-ivory)] px-4 py-2 rounded-full border border-[var(--tarius-border)]">
                       <span
-                        className={`w-2 h-2 rounded-full shadow-sm ${
-                          faq.isPublished
-                            ? 'bg-emerald-500 shadow-emerald-500/40'
-                            : 'bg-stone-300'
-                        }`}
+                        className={"w-2 h-2 rounded-full shadow-sm " + (faq.isPublished ? "bg-emerald-500 shadow-emerald-500/40" : "bg-stone-300")}
                       />
                       <span className="text-[10px] uppercase tracking-widest text-[var(--tarius-graphite)] font-medium">
                         {faq.isPublished ? 'Published' : 'Draft'}
