@@ -19,8 +19,8 @@ export default function AdminLayout({
   useEffect(() => {
     const fetchUser = async () => {
       const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        process.env['NEXT_PUBLIC_SUPABASE_URL'] as string,
+        process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] as string
       );
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email) {
@@ -28,27 +28,27 @@ export default function AdminLayout({
       }
     };
     
-    // Only fetch if we are not on an auth screen
     if (!['/admin/login', '/admin/reset-password', '/admin/forgot-password'].includes(pathname || '')) {
       fetchUser();
     }
   }, [pathname]);
 
-  // Exclude ALL auth screens from rendering the sidebar
   if (['/admin/login', '/admin/reset-password', '/admin/forgot-password'].includes(pathname || '')) {
     return <>{children}</>;
   }
 
+  // SIMPLIFIED NAVIGATION NAMES
   const navItems = [
-    { name: 'Product Matrix', href: '/admin/products' },
-    { name: 'Knowledge Base', href: '/admin/faqs' },
-    { name: 'Client Inquiries', href: '/admin/inquiries' },
+    { name: 'Analytics', href: '/admin/analytics' },
+    { name: 'Products', href: '/admin/products' },
+    { name: 'FAQs', href: '/admin/faqs' },
+    { name: 'Inquiries', href: '/admin/inquiries' },
   ];
 
   const handleSignOut = async () => {
     const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      process.env['NEXT_PUBLIC_SUPABASE_URL'] as string,
+      process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] as string
     );
     await supabase.auth.signOut();
     router.push('/admin/login');

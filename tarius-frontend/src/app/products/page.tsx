@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { supabase } from "@/lib/api";
+import TrackedLink from "@/components/products/TrackedLink";
 
 export const dynamic = 'force-dynamic';
 
@@ -116,15 +117,13 @@ export default async function ProductsPage() {
                       {links.length > 0 ? (
                         <div className="flex flex-wrap gap-3 w-full sm:w-auto">
                           {links.map((link: any, idx: number) => (
-                            <a 
-                              key={idx} 
-                              href={link.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="btn-tarius flex-1 text-center hover:bg-[var(--tarius-olive)] hover:border-[var(--tarius-olive)] hover:text-white"
-                            >
-                              Reserve on {link.storeName}
-                            </a>
+                            <TrackedLink 
+                              key={idx}
+                              productId={product.id}
+                              productName={product.name}
+                              storeName={link.storeName}
+                              url={link.url}
+                            />
                           ))}
                         </div>
                       ) : (
