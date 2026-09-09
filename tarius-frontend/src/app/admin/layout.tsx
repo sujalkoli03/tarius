@@ -2,9 +2,10 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { createBrowserClient } from '@supabase/ssr';
 
 export default function AdminLayout({
   children,
@@ -12,29 +13,64 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [adminEmail, setAdminEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setAdminEmail(user.email);
+      }
+    };
+    
+    // Only fetch if we are not on an auth screen
+    if (!['/admin/login', '/admin/reset-password', '/admin/forgot-password'].includes(pathname || '')) {
+      fetchUser();
+    }
+  }, [pathname]);
+
+  // Exclude ALL auth screens from rendering the sidebar
+  if (['/admin/login', '/admin/reset-password', '/admin/forgot-password'].includes(pathname || '')) {
+    return <>{children}</>;
+  }
 
   const navItems = [
     { name: 'Product Matrix', href: '/admin/products' },
     { name: 'Knowledge Base', href: '/admin/faqs' },
-    { name: 'Private Concierge', href: '/admin/inquiries' },
+    { name: 'Client Inquiries', href: '/admin/inquiries' },
   ];
+
+  const handleSignOut = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    await supabase.auth.signOut();
+    router.push('/admin/login');
+    router.refresh();
+  };
 
   return (
     <div className="flex min-h-[calc(100vh-76px)] pt-[76px] bg-[var(--tarius-ivory)] font-body selection:bg-[var(--tarius-olive)] selection:text-white">
       <aside className="w-64 border-r border-[var(--tarius-border)] bg-[var(--tarius-ivory-deep)] flex flex-col fixed top-[76px] h-[calc(100vh-76px)] z-20 shadow-xl">
         <div className="p-8 border-b border-[var(--tarius-border)]">
           <Link
-            href="/admin/products"
+            href="/admin"
             className="font-display text-2xl tracking-[0.15em] text-[var(--tarius-graphite)] block hover:text-[var(--tarius-olive)] transition-colors"
           >
             TARIUS
           </Link>
           <p className="text-eyebrow text-[var(--tarius-olive)] mt-2">
-            Admin Sanctuary
+            Admin Dashboard
           </p>
         </div>
 
-        <nav className="flex-1 py-8 px-4 flex flex-col gap-2">
+        <nav className="flex-1 py-8 px-4 flex flex-col gap-2 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = pathname === item.href || (pathname && pathname.startsWith(item.href + '/'));
 
@@ -53,13 +89,29 @@ export default function AdminLayout({
           })}
         </nav>
 
-        <div className="p-8 border-t border-[var(--tarius-border)] bg-black/5">
-          <Link
-            href="/"
-            className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-[var(--tarius-olive)] transition-colors flex items-center gap-2"
-          >
-            Return to Shop
-          </Link>
+        <div className="p-6 border-t border-[var(--tarius-border)] bg-black/5 flex flex-col gap-5">
+          <div className="flex flex-col gap-1 border-b border-[var(--tarius-border)] pb-4">
+            <span className="text-[9px] uppercase tracking-widest text-stone-500">Active Session</span>
+            <span className="text-xs text-[var(--tarius-graphite)] font-medium truncate" title={adminEmail || ''}>
+              {adminEmail || 'Loading...'}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <Link
+              href="/"
+              className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-[var(--tarius-olive)] transition-colors flex items-center gap-2"
+            >
+              Return to Site
+            </Link>
+            
+            <button
+              onClick={handleSignOut}
+              className="text-left text-[10px] tracking-widest uppercase text-red-700/70 hover:text-red-700 transition-colors flex items-center gap-2"
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </aside>
 

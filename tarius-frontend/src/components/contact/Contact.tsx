@@ -58,21 +58,37 @@ export default function Contact(props: { id?: string }) {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const detailedNotes = `
-Type: ${selectedInquiry}
-Phone: ${formData.phone || 'N/A'}
-Preferred Contact: ${formData.preferredContact}
----
-Details / Message:
-${formData.message}
----
-Additional Meta:
-- Gifting: Spirulina (${formData.giftingProducts.spirulina ? formData.spirulinaQty : 'No'}), Moringa (${formData.giftingProducts.moringa ? formData.moringaQty : 'No'})
-- Delivery: ${formData.deliveryDate} @ ${formData.deliveryTime} (${formData.deliveryLocation})
-- Social/Press: ${formData.socialHandle} | Products: ${formData.collabProducts}
-- Careers: Position (${formData.position}), Exp. Salary (${formData.expectedSalary}), Joining (${formData.tentativeJoiningDate})
-- Feedback/Purchase: Platform (${formData.purchasePlatform}), Date (${formData.purchaseDate})
-    `.trim();
+    let metaData: string[] = [];
+
+    if (selectedInquiry === 'gifting') {
+      metaData.push(`Gifting Requirements:`);
+      metaData.push(`- Spirulina: ${formData.giftingProducts.spirulina ? formData.spirulinaQty : '0'}`);
+      metaData.push(`- Moringa: ${formData.giftingProducts.moringa ? formData.moringaQty : '0'}`);
+      metaData.push(`- Delivery: ${formData.deliveryDate || 'TBD'} @ ${formData.deliveryTime || 'TBD'}`);
+      metaData.push(`- Location: ${formData.deliveryLocation || 'TBD'}`);
+    } else if (selectedInquiry === 'collab' || selectedInquiry === 'press') {
+      metaData.push(`Partnership Details:`);
+      metaData.push(`- Social/URL: ${formData.socialHandle || 'N/A'}`);
+      metaData.push(`- Products Requested: ${formData.collabProducts || 'N/A'}`);
+      metaData.push(`- Event Date: ${formData.eventDate || 'N/A'} @ ${formData.eventTime || 'N/A'}`);
+    } else if (selectedInquiry === 'careers') {
+      metaData.push(`Candidate Profile:`);
+      metaData.push(`- Position: ${formData.position || 'N/A'}`);
+      metaData.push(`- Expected Salary: ${formData.expectedSalary || 'N/A'}`);
+      metaData.push(`- Qualifications: ${formData.qualifications || 'N/A'}`);
+      metaData.push(`- Joining Date: ${formData.tentativeJoiningDate || 'N/A'}`);
+    } else if (selectedInquiry === 'feedback') {
+      metaData.push(`Feedback Context:`);
+      metaData.push(`- Purchased From: ${formData.purchasePlatform || 'N/A'}`);
+      metaData.push(`- Purchase Date: ${formData.purchaseDate || 'N/A'}`);
+    }
+
+    const compiledNotes = [
+      formData.phone ? `Phone: ${formData.phone}` : null,
+      `Client Message:`,
+      formData.message,
+      ...(metaData.length > 0 ? ['--- Additional Details ---', ...metaData] : [])
+    ].filter(Boolean).join('\n');
 
     const { error } = await supabase.from('Inquiry').insert([
       {
@@ -80,7 +96,7 @@ Additional Meta:
         email: formData.email,
         preferredContact: formData.preferredContact,
         tier: selectedInquiry,
-        deliveryInstructions: detailedNotes,
+        deliveryInstructions: compiledNotes,
         status: 'pending'
       }
     ]);
@@ -207,6 +223,18 @@ Additional Meta:
                         />
                         <label className="absolute left-0 top-3 text-stone-400 font-sans text-xs uppercase tracking-widest transition-all peer-focus:-top-4 peer-focus:text-[10px] peer-focus:text-[var(--tarius-champagne)] peer-valid:-top-4 peer-valid:text-[10px] peer-valid:text-stone-400 pointer-events-none">Email Address</label>
                       </div>
+                    </div>
+
+                    <div className="relative group">
+                      <input 
+                        type="tel" 
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className="w-full bg-transparent border-b border-[var(--tarius-champagne)]/30 py-3 text-[var(--tarius-white)] font-sans text-sm focus:outline-none focus:border-[var(--tarius-champagne)] transition-colors peer placeholder-transparent" 
+                        placeholder="Phone Number (Optional)"
+                      />
+                      <label className="absolute left-0 top-3 text-stone-400 font-sans text-xs uppercase tracking-widest transition-all peer-focus:-top-4 peer-focus:text-[10px] peer-focus:text-[var(--tarius-champagne)] peer-valid:-top-4 peer-valid:text-[10px] peer-valid:text-stone-400 pointer-events-none">Phone Number (Optional)</label>
                     </div>
 
                     {selectedInquiry === 'gifting' && (
