@@ -3,20 +3,28 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 
 const navigation = [
   { label: "Shop", href: "/products" },
   { label: "Our Story", href: "/#story" },
   { label: "Quality", href: "/#quality" },
+  { label: "Certifications", href: "/certifications" },
   { label: "FAQ", href: "/#faq" },
 ];
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   const closeMenu = () => {
     setIsMenuOpen(false);
   };
+
+  // Do not render the public navbar on any admin route
+  if (pathname && pathname.startsWith("/admin")) {
+    return null;
+  }
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-[var(--tarius-border)] bg-[var(--tarius-ivory)]/95 backdrop-blur-md">
@@ -71,19 +79,13 @@ export default function Navbar() {
         >
           <span className="flex w-6 flex-col gap-[6px]">
             <span
-              className={`block h-px w-full bg-[var(--tarius-graphite)] transition-transform duration-300 ${
-                isMenuOpen ? "translate-y-[3.5px] rotate-45" : ""
-              }`}
+              className={"block h-px w-full bg-[var(--tarius-graphite)] transition-transform duration-300 " + (isMenuOpen ? "translate-y-[3.5px] rotate-45" : "")}
             />
             <span
-              className={`block h-px w-full bg-[var(--tarius-graphite)] transition-opacity duration-300 ${
-                isMenuOpen ? "opacity-0" : ""
-              }`}
+              className={"block h-px w-full bg-[var(--tarius-graphite)] transition-opacity duration-300 " + (isMenuOpen ? "opacity-0" : "")}
             />
             <span
-              className={`block h-px w-full bg-[var(--tarius-graphite)] transition-transform duration-300 ${
-                isMenuOpen ? "-translate-y-[3.5px] -rotate-45" : ""
-              }`}
+              className={"block h-px w-full bg-[var(--tarius-graphite)] transition-transform duration-300 " + (isMenuOpen ? "-translate-y-[3.5px] -rotate-45" : "")}
             />
           </span>
         </button>
@@ -91,11 +93,7 @@ export default function Navbar() {
 
       {/* Mobile Navigation */}
       <div
-        className={`overflow-hidden border-t border-[var(--tarius-border)] bg-[var(--tarius-ivory)] transition-[max-height,opacity] duration-300 lg:hidden ${
-          isMenuOpen
-            ? "max-h-[420px] opacity-100"
-            : "max-h-0 opacity-0"
-        }`}
+        className={"overflow-hidden border-t border-[var(--tarius-border)] bg-[var(--tarius-ivory)] transition-[max-height,opacity] duration-300 lg:hidden " + (isMenuOpen ? "max-h-[420px] opacity-100" : "max-h-0 opacity-0")}
       >
         <div className="container-tarius flex flex-col py-5">
           {navigation.map((item) => (

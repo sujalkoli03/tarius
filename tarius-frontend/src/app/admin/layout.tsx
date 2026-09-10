@@ -37,11 +37,10 @@ export default function AdminLayout({
     return <>{children}</>;
   }
 
-  // SIMPLIFIED NAVIGATION NAMES
-const navItems = [
+  const navItems = [
     { name: 'Analytics', href: '/admin/analytics' },
     { name: 'Products', href: '/admin/products' },
-    { name: 'Certifications', href: '/admin/certifications' }, // ADD THIS LINE
+    { name: 'Certifications', href: '/admin/certifications' },
     { name: 'FAQs', href: '/admin/faqs' },
     { name: 'Inquiries', href: '/admin/inquiries' },
   ];
@@ -57,9 +56,10 @@ const navItems = [
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-76px)] pt-[76px] bg-[var(--tarius-ivory)] font-body selection:bg-[var(--tarius-olive)] selection:text-white">
-      <aside className="w-64 border-r border-[var(--tarius-border)] bg-[var(--tarius-ivory-deep)] flex flex-col fixed top-[76px] h-[calc(100vh-76px)] z-20 shadow-xl">
-        <div className="p-8 border-b border-[var(--tarius-border)]">
+    <div className="flex min-h-screen bg-[var(--tarius-ivory)] font-body selection:bg-[var(--tarius-olive)] selection:text-white">
+      
+      <aside className="w-64 border-r border-[var(--tarius-border)] bg-[var(--tarius-ivory-deep)] flex flex-col fixed top-0 h-screen z-20 shadow-xl">
+        <div className="p-8 border-b border-[var(--tarius-border)] mt-4">
           <Link
             href="/admin"
             className="font-display text-2xl tracking-[0.15em] text-[var(--tarius-graphite)] block hover:text-[var(--tarius-olive)] transition-colors"
@@ -116,8 +116,8 @@ const navItems = [
         </div>
       </aside>
 
-      <main className="ml-64 flex-1 relative min-h-[calc(100vh-76px)]">
-        <div className="fixed top-[76px] right-0 w-[600px] h-[600px] bg-[var(--tarius-champagne)]/20 rounded-full blur-[120px] pointer-events-none z-0"></div>
+      <main className="ml-64 flex-1 relative min-h-screen">
+        <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-[var(--tarius-champagne)]/20 rounded-full blur-[120px] pointer-events-none z-0"></div>
         <div className="relative z-10 p-12 max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-forwards">
           {children}
         </div>

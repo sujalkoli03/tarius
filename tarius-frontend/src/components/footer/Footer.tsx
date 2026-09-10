@@ -1,7 +1,18 @@
+// Filename: src/components/Footer.tsx
+
+"use client";
+
 import React from 'react';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  if (pathname && pathname.startsWith('/admin')) {
+    return null;
+  }
+
   return (
     <footer className="bg-[var(--tarius-graphite)] text-[var(--tarius-white)] border-t border-white/10 pt-20 pb-12">
       <div className="container-tarius">

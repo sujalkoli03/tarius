@@ -7,87 +7,117 @@ import { supabase } from '@/lib/api';
 import { createBrowserClient } from '@supabase/ssr';
 import { generatePDFThumbnail } from '@/lib/pdfHelper';
 
-interface Certification {
+// --- TYPES ---
+type BlockType = 'hero' | 'spotlight' | 'grid' | 'ledger' | 'text' | 'single_pdf' | 'image_banner' | 'overlay_banner' | 'dual_media' | 'divider';
+
+interface Block {
   id: string;
-  title: string;
-  description: string;
-  templateType: string;
-  pdfUrl: string | null;
-  thumbnailUrl: string | null;
-  displayOrder: number;
-  isPublished: boolean;
+  type: BlockType;
+  content: any;
 }
 
-export default function AdminCertifications() {
-  const [certifications, setCertifications] = useState<Certification[]>([]);
+export default function AdminVisualCertifications() {
+  const [blocks, setBlocks] = useState<Block[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Editor State
-  const [isAdding, setIsAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<Partial<Certification>>({});
-  
-  // File Upload State
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
-  
-  const [isProcessingPdf, setIsProcessingPdf] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [processingMediaId, setProcessingMediaId] = useState<string | null>(null);
 
-  // --- NEW: PAGE SETTINGS STATE ---
-  const [isEditingSettings, setIsEditingSettings] = useState(false);
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const [pageSettings, setPageSettings] = useState<any>({
-    heroEyebrow: 'Absolute Transparency',
-    heroTitle: 'Certifications & Labs.',
-    heroDescription: 'We believe uncompromising quality requires irrefutable proof...',
-    titleSize: 'text-7xl',
-    spotlightLabel: 'Official Filing',
-    gridTitle: 'Laboratory Analysis',
-    gridSubtitle: 'Product-Specific Documentation',
-    ledgerTitle: 'Supplementary Ledger',
-    ledgerSubtitle: 'Historical & Supporting Filings'
-  });
+  // --- DEFAULT TEMPLATES ---
+  const defaultHero = {
+    eyebrow: 'Absolute Transparency',
+    title: 'Certifications & Labs.',
+    description: 'We believe uncompromising quality requires irrefutable proof. Explore our official regulatory filings below.',
+    titleSize: 'text-6xl'
+  };
+
+  const defaultText = {
+    title: 'Brand Philosophy',
+    description: 'Enter a powerful brand statement, paragraph, or laboratory insight here...',
+    alignment: 'center'
+  };
+
+  const defaultSpotlight = {
+    label: 'Official Filing',
+    title: 'New Spotlight Document',
+    description: 'Enter detailed laboratory or regulatory notes here...',
+    pdfUrl: '',
+    thumbnailUrl: '',
+    mediaPosition: 'left' // NEW: controls left or right alignment
+  };
+
+  const defaultDualMedia = {
+    items: [
+      { title: 'Document One', description: 'Description for the first document...', pdfUrl: '', thumbnailUrl: '' },
+      { title: 'Document Two', description: 'Description for the second document...', pdfUrl: '', thumbnailUrl: '' }
+    ]
+  };
+
+  const defaultSinglePdf = {
+    title: 'Featured Document',
+    description: 'Description of this important document.',
+    pdfUrl: '',
+    thumbnailUrl: ''
+  };
+
+  const defaultGrid = {
+    sectionTitle: 'Laboratory Analysis',
+    sectionSubtitle: 'Product-Specific Documentation',
+    cards: [
+      { title: 'Document 1', description: 'Notes...', pdfUrl: '', thumbnailUrl: '' },
+      { title: 'Document 2', description: 'Notes...', pdfUrl: '', thumbnailUrl: '' },
+      { title: 'Document 3', description: 'Notes...', pdfUrl: '', thumbnailUrl: '' }
+    ]
+  };
+
+  const defaultLedger = {
+    sectionTitle: 'Supplementary Ledger',
+    sectionSubtitle: 'Historical & Supporting Filings',
+    items: [
+      { title: 'Regulatory Filing 1', description: 'Reference ID...', pdfUrl: '', thumbnailUrl: '' }
+    ]
+  };
+
+  const defaultImageBanner = {
+    imageUrl: '',
+    height: 'h-[400px]'
+  };
+
+  const defaultOverlayBanner = {
+    title: 'Uncompromising Quality',
+    description: 'A deeply integrated supply chain from the botanical source to the final formulation.',
+    imageUrl: '',
+    height: 'h-[500px]'
+  };
+
+  const defaultDivider = {
+    style: 'line'
+  };
 
   useEffect(() => {
-    fetchAllData();
+    fetchPageLayout();
   }, []);
 
-  const fetchAllData = async () => {
+  const fetchPageLayout = async () => {
     setLoading(true);
-    
-    // 1. Fetch the documents
-    const { data: certData } = await supabase
-      .from('Certification')
-      .select('*')
-      .order('displayOrder', { ascending: true })
-      .order('createdAt', { ascending: false });
-
-    if (certData) setCertifications(certData);
-
-    // 2. Fetch the Global Page Settings
-    const { data: settingsData } = await supabase
+    const { data, error } = await supabase
       .from('SiteSettings')
-      .select('*')
-      .eq('key', 'certifications_page')
+      .select('value')
+      .eq('key', 'certifications_page_blocks')
       .single();
 
-    if (settingsData && settingsData.value) {
-      setPageSettings(settingsData.value);
+    if (data && data.value && Array.isArray(data.value)) {
+      setBlocks(data.value);
+    } else {
+      setBlocks([
+        { id: "blk_" + Date.now() + "1", type: 'hero', content: defaultHero },
+        { id: "blk_" + Date.now() + "2", type: 'spotlight', content: defaultSpotlight }
+      ]);
     }
-
     setLoading(false);
   };
 
-  // --- PAGE SETTINGS LOGIC ---
-  const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setPageSettings((prev: any) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSaveSettings = async () => {
-    setIsSavingSettings(true);
+  const handleSaveLayout = async () => {
+    setIsSaving(true);
     const supabaseAuth = createBrowserClient(
       process.env['NEXT_PUBLIC_SUPABASE_URL'] as string,
       process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] as string
@@ -95,534 +125,684 @@ export default function AdminCertifications() {
 
     const { error } = await supabaseAuth
       .from('SiteSettings')
-      .update({ value: pageSettings, updatedAt: new Date().toISOString() })
-      .eq('key', 'certifications_page');
+      .upsert({ 
+        key: 'certifications_page_blocks', 
+        value: blocks,
+        updatedAt: new Date().toISOString()
+      }, { onConflict: 'key' });
 
     if (error) {
-      alert("Failed to save settings.");
+      alert("Failed to save layout. " + error.message);
     } else {
-      setIsEditingSettings(false);
-      fetchAllData();
+      alert("Page layout published successfully!");
     }
-    setIsSavingSettings(false);
+    setIsSaving(false);
   };
 
+  // --- BLOCK MANAGEMENT ---
+  const addBlock = (type: string) => {
+    let content = {};
+    if (type === 'hero') content = { ...defaultHero };
+    if (type === 'text') content = { ...defaultText };
+    if (type === 'spotlight') content = { ...defaultSpotlight };
+    if (type === 'dual_media') content = { ...defaultDualMedia };
+    if (type === 'single_pdf') content = { ...defaultSinglePdf };
+    if (type === 'grid') content = { ...defaultGrid };
+    if (type === 'ledger') content = { ...defaultLedger };
+    if (type === 'image_banner') content = { ...defaultImageBanner };
+    if (type === 'overlay_banner') content = { ...defaultOverlayBanner };
+    if (type === 'divider') content = { ...defaultDivider };
 
-  // --- DOCUMENT LOGIC ---
-  const handleAddNew = () => {
-    setEditingId(null);
-    setIsAdding(true);
-    setIsEditingSettings(false);
-    setPdfFile(null);
-    setThumbnailBlob(null);
-    setThumbnailPreview(null);
-    
-    setFormData({
-      id: "cert_" + Math.random().toString(36).substr(2, 9),
-      title: '',
-      description: '',
-      templateType: 'grid',
-      pdfUrl: '',
-      thumbnailUrl: '',
-      displayOrder: certifications.length,
-      isPublished: false,
-    });
+    const newBlock: Block = {
+      id: "blk_" + Date.now() + Math.random().toString(36).substring(2, 6),
+      type: type as BlockType,
+      content: content
+    };
+
+    setBlocks(prev => [...prev, newBlock]);
   };
 
-  const handleEdit = (cert: Certification) => {
-    setIsAdding(false);
-    setIsEditingSettings(false);
-    setEditingId(cert.id);
-    setPdfFile(null);
-    setThumbnailBlob(null);
-    setThumbnailPreview(cert.thumbnailUrl);
-    setFormData(cert);
+  const removeBlock = (id: string) => {
+    if (!window.confirm("Remove this entire section?")) return;
+    setBlocks(prev => prev.filter(b => b.id !== id));
   };
 
-  const handleCancel = () => {
-    setIsAdding(false);
-    setEditingId(null);
-    setFormData({});
+  const moveBlock = (index: number, direction: -1 | 1) => {
+    const newBlocks = [...blocks];
+    if (index + direction < 0 || index + direction >= newBlocks.length) return;
+    const temp = newBlocks[index];
+    newBlocks[index] = newBlocks[index + direction];
+    newBlocks[index + direction] = temp;
+    setBlocks(newBlocks);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const updateBlockContent = (blockId: string, field: string, value: any) => {
+    setBlocks(prev => prev.map(b => {
+      if (b.id === blockId) {
+        return { ...b, content: { ...b.content, [field]: value } };
+      }
+      return b;
+    }));
   };
 
-  const handleTogglePublish = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ ...prev, isPublished: e.target.checked }));
+  const updateBlockArrayItem = (blockId: string, arrayField: string, itemIndex: number, field: string, value: any) => {
+    setBlocks(prev => prev.map(b => {
+      if (b.id === blockId) {
+        const newArray = [...b.content[arrayField]];
+        newArray[itemIndex] = { ...newArray[itemIndex], [field]: value };
+        return { ...b, content: { ...b.content, [arrayField]: newArray } };
+      }
+      return b;
+    }));
   };
 
-  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const addArrayItem = (blockId: string, arrayField: string, type: 'grid' | 'ledger') => {
+    setBlocks(prev => prev.map(b => {
+      if (b.id === blockId) {
+        const newItem = type === 'grid' 
+          ? { title: 'New Document', description: 'Notes...', pdfUrl: '', thumbnailUrl: '' }
+          : { title: 'New Ledger Item', description: 'Details...', pdfUrl: '', thumbnailUrl: '' };
+        return { ...b, content: { ...b.content, [arrayField]: [...b.content[arrayField], newItem] } };
+      }
+      return b;
+    }));
+  };
 
+  const removeArrayItem = (blockId: string, arrayField: string, itemIndex: number) => {
+    setBlocks(prev => prev.map(b => {
+      if (b.id === blockId) {
+        const newArray = [...b.content[arrayField]];
+        newArray.splice(itemIndex, 1);
+        return { ...b, content: { ...b.content, [arrayField]: newArray } };
+      }
+      return b;
+    }));
+  };
+
+  // --- UPLOAD ENGINES ---
+  const handlePdfUpload = async (file: File, blockId: string, arrayField?: string, itemIndex?: number) => {
     if (file.type !== 'application/pdf') {
-      alert('Strictly PDF files are allowed for certifications.');
+      alert('Strictly PDF files are allowed here.');
       return;
     }
 
-    setIsProcessingPdf(true);
-    setPdfFile(file);
+    const uploadId = arrayField ? blockId + "_" + itemIndex : blockId;
+    setProcessingMediaId(uploadId);
 
-    const generatedImageBlob = await generatePDFThumbnail(file);
-    
-    if (generatedImageBlob) {
-      setThumbnailBlob(generatedImageBlob);
-      setThumbnailPreview(URL.createObjectURL(generatedImageBlob));
-    } else {
-      alert("Warning: Could not auto-generate thumbnail. A default icon will be used.");
-    }
-
-    setIsProcessingPdf(false);
-  };
-
-  const handleSave = async () => {
-    if (!formData.title) {
-      alert("A title is required.");
-      return;
-    }
-
-    setIsSaving(true);
-    
     const supabaseAuth = createBrowserClient(
       process.env['NEXT_PUBLIC_SUPABASE_URL'] as string,
       process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] as string
     );
 
-    let finalPdfUrl = formData.pdfUrl;
-    let finalThumbnailUrl = formData.thumbnailUrl;
+    let finalPdfUrl = '';
+    let finalThumbnailUrl = '';
 
-    if (pdfFile) {
-      const pdfName = "doc_" + Date.now() + ".pdf";
-      const { error: pdfError } = await supabaseAuth.storage
-        .from('documents')
-        .upload(pdfName, pdfFile);
-        
-      if (!pdfError) {
-        finalPdfUrl = supabaseAuth.storage.from('documents').getPublicUrl(pdfName).data.publicUrl;
-      }
+    const pdfName = "doc_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6) + ".pdf";
+    const { error: pdfError } = await supabaseAuth.storage.from('documents').upload(pdfName, file);
+    if (!pdfError) {
+      finalPdfUrl = supabaseAuth.storage.from('documents').getPublicUrl(pdfName).data.publicUrl;
     }
 
-    if (thumbnailBlob) {
-      const thumbName = "thumb_" + Date.now() + ".jpg";
-      const { error: thumbError } = await supabaseAuth.storage
-        .from('documents')
-        .upload(thumbName, thumbnailBlob);
-        
+    const generatedImageBlob = await generatePDFThumbnail(file);
+    if (generatedImageBlob) {
+      const thumbName = "thumb_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6) + ".jpg";
+      const { error: thumbError } = await supabaseAuth.storage.from('documents').upload(thumbName, generatedImageBlob);
       if (!thumbError) {
         finalThumbnailUrl = supabaseAuth.storage.from('documents').getPublicUrl(thumbName).data.publicUrl;
       }
     }
 
-    const payload = {
-      ...formData,
-      pdfUrl: finalPdfUrl,
-      thumbnailUrl: finalThumbnailUrl,
-    };
-
-    if (isAdding) {
-      await supabaseAuth.from('Certification').insert([payload]);
-    } else if (editingId) {
-      await supabaseAuth.from('Certification').update(payload).eq('id', editingId);
+    if (arrayField !== undefined && itemIndex !== undefined) {
+      updateBlockArrayItem(blockId, arrayField, itemIndex, 'pdfUrl', finalPdfUrl);
+      updateBlockArrayItem(blockId, arrayField, itemIndex, 'thumbnailUrl', finalThumbnailUrl);
+    } else {
+      updateBlockContent(blockId, 'pdfUrl', finalPdfUrl);
+      updateBlockContent(blockId, 'thumbnailUrl', finalThumbnailUrl);
     }
 
-    setIsSaving(false);
-    handleCancel();
-    fetchAllData();
+    setProcessingMediaId(null);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Delete this certification? This action is permanent.")) return;
-    
+  const handleImageUpload = async (file: File, blockId: string) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Strictly Image files are allowed here.');
+      return;
+    }
+
+    setProcessingMediaId(blockId);
+
     const supabaseAuth = createBrowserClient(
       process.env['NEXT_PUBLIC_SUPABASE_URL'] as string,
       process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] as string
     );
-    await supabaseAuth.from('Certification').delete().eq('id', id);
-    handleCancel();
-    fetchAllData();
+
+    const ext = file.name.split('.').pop();
+    const imgName = "img_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6) + "." + ext;
+    
+    const { error } = await supabaseAuth.storage.from('documents').upload(imgName, file);
+    if (!error) {
+      const finalUrl = supabaseAuth.storage.from('documents').getPublicUrl(imgName).data.publicUrl;
+      updateBlockContent(blockId, 'imageUrl', finalUrl);
+    } else {
+      alert("Image upload failed.");
+    }
+
+    setProcessingMediaId(null);
   };
 
-  // --- NEW: GLOBAL SETTINGS RENDERER ---
-  const renderPageSettings = () => (
-    <div className="bg-white border border-[var(--tarius-border)] shadow-xl overflow-hidden mt-6 animate-in fade-in duration-500 rounded-sm">
-      <div className="bg-[var(--tarius-graphite)] px-8 py-5 flex items-center justify-between border-b border-[var(--tarius-border)]">
-        <span className="text-xs uppercase tracking-[0.2em] text-[var(--tarius-champagne)]">Global Page Configurator</span>
-        <button onClick={() => setIsEditingSettings(false)} className="text-stone-400 hover:text-white transition-colors text-xs uppercase tracking-widest">Close</button>
-      </div>
-      
-      <div className="p-8 md:p-12 bg-stone-50 grid grid-cols-1 md:grid-cols-2 gap-12">
-        {/* Left Column: Hero Section */}
-        <div className="space-y-6">
-          <h3 className="font-display text-2xl text-[var(--tarius-olive)] border-b border-[var(--tarius-border)] pb-2">Hero Section</h3>
-          
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-widest text-stone-500">Hero Eyebrow Text</label>
-            <input type="text" name="heroEyebrow" value={pageSettings.heroEyebrow || ''} onChange={handleSettingsChange} className="w-full bg-white border border-[var(--tarius-border)] p-3 text-sm text-[var(--tarius-graphite)] focus:outline-none focus:border-[var(--tarius-olive)]" />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-widest text-stone-500">Main Hero Title</label>
-            <input type="text" name="heroTitle" value={pageSettings.heroTitle || ''} onChange={handleSettingsChange} className="w-full bg-white border border-[var(--tarius-border)] p-3 text-sm text-[var(--tarius-graphite)] focus:outline-none focus:border-[var(--tarius-olive)]" />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-widest text-stone-500">Hero Title Size Scale</label>
-            <select name="titleSize" value={pageSettings.titleSize || 'text-7xl'} onChange={handleSettingsChange} className="w-full bg-white border border-[var(--tarius-border)] p-3 text-sm text-[var(--tarius-graphite)] focus:outline-none focus:border-[var(--tarius-olive)]">
-              <option value="text-5xl">Large (5xl)</option>
-              <option value="text-6xl">Very Large (6xl)</option>
-              <option value="text-7xl">Massive (7xl)</option>
-              <option value="text-8xl">Colossal (8xl)</option>
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-widest text-stone-500">Hero Subtitle / Description</label>
-            <textarea name="heroDescription" rows={4} value={pageSettings.heroDescription || ''} onChange={handleSettingsChange} className="w-full bg-white border border-[var(--tarius-border)] p-3 text-sm text-[var(--tarius-graphite)] focus:outline-none focus:border-[var(--tarius-olive)] resize-none" />
-          </div>
-        </div>
-
-        {/* Right Column: Section Labels */}
-        <div className="space-y-6">
-          <h3 className="font-display text-2xl text-[var(--tarius-olive)] border-b border-[var(--tarius-border)] pb-2">Section Labels</h3>
-          
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-widest text-stone-500">Spotlight Tag (Hero Documents)</label>
-            <input type="text" name="spotlightLabel" value={pageSettings.spotlightLabel || ''} onChange={handleSettingsChange} className="w-full bg-white border border-[var(--tarius-border)] p-3 text-sm text-[var(--tarius-graphite)] focus:outline-none focus:border-[var(--tarius-olive)]" />
-          </div>
-
-          <div className="space-y-2 mt-8">
-            <label className="text-[10px] uppercase tracking-widest text-stone-500">Grid Title</label>
-            <input type="text" name="gridTitle" value={pageSettings.gridTitle || ''} onChange={handleSettingsChange} className="w-full bg-white border border-[var(--tarius-border)] p-3 text-sm text-[var(--tarius-graphite)] focus:outline-none focus:border-[var(--tarius-olive)]" />
-            <input type="text" name="gridSubtitle" value={pageSettings.gridSubtitle || ''} onChange={handleSettingsChange} className="w-full bg-white border border-[var(--tarius-border)] p-3 text-xs text-stone-500 mt-2 focus:outline-none focus:border-[var(--tarius-olive)]" placeholder="Grid Subtitle..." />
-          </div>
-
-          <div className="space-y-2 mt-8">
-            <label className="text-[10px] uppercase tracking-widest text-stone-500">Ledger Title</label>
-            <input type="text" name="ledgerTitle" value={pageSettings.ledgerTitle || ''} onChange={handleSettingsChange} className="w-full bg-white border border-[var(--tarius-border)] p-3 text-sm text-[var(--tarius-graphite)] focus:outline-none focus:border-[var(--tarius-olive)]" />
-            <input type="text" name="ledgerSubtitle" value={pageSettings.ledgerSubtitle || ''} onChange={handleSettingsChange} className="w-full bg-white border border-[var(--tarius-border)] p-3 text-xs text-stone-500 mt-2 focus:outline-none focus:border-[var(--tarius-olive)]" placeholder="Ledger Subtitle..." />
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white border-t border-[var(--tarius-border)] p-6 flex justify-end gap-4">
-        <button onClick={() => setIsEditingSettings(false)} className="px-8 py-3 text-[10px] uppercase tracking-widest text-stone-500 hover:text-[var(--tarius-graphite)] transition-colors">Discard</button>
-        <button onClick={handleSaveSettings} disabled={isSavingSettings} className="px-8 py-3 bg-[var(--tarius-graphite)] text-[var(--tarius-champagne)] text-[10px] uppercase tracking-widest hover:bg-[var(--tarius-olive)] hover:text-white transition-all disabled:opacity-50">
-          {isSavingSettings ? 'Saving...' : 'Deploy Global Changes'}
-        </button>
-      </div>
-    </div>
-  );
-
-  // --- DOCUMENT CANVAS RENDERER (YOUR PREFERRED STYLE) ---
-  const renderCanvas = () => {
-    const isSpotlight = formData.templateType === 'spotlight';
-    const isGrid = formData.templateType === 'grid';
-    const isLedger = formData.templateType === 'ledger';
+  // --- VISUAL RENDERERS ---
+  const renderPdfDropzone = (blockId: string, currentThumb: string, arrayField?: string, itemIndex?: number, isMini = false) => {
+    const uploadId = arrayField ? blockId + "_" + itemIndex : blockId;
+    const isProcessing = processingMediaId === uploadId;
 
     return (
-      <div className="bg-white border border-[var(--tarius-border)] shadow-2xl overflow-hidden mt-6 animate-in fade-in zoom-in-95 duration-500 rounded-sm">
-        
-        {/* Editor Toolbar */}
-        <div className="bg-[var(--tarius-graphite)] px-6 py-4 flex items-center justify-between border-b border-[var(--tarius-border)]">
-          <div className="flex items-center gap-4">
-            <span className="text-[10px] uppercase tracking-widest text-[var(--tarius-champagne)]">Canvas Mode</span>
-            <select
-              name="templateType"
-              value={formData.templateType || 'grid'}
-              onChange={handleInputChange}
-              className="bg-transparent border border-[var(--tarius-champagne)]/30 text-white text-xs px-3 py-1 focus:outline-none focus:border-[var(--tarius-champagne)]"
-            >
-              <option value="spotlight" className="text-black">Template A: Spotlight (Hero)</option>
-              <option value="grid" className="text-black">Template B: Dossier Grid (Card)</option>
-              <option value="ledger" className="text-black">Template C: Ledger (Minimal)</option>
-            </select>
-          </div>
-          
-          <label className="flex items-center gap-3 cursor-pointer">
-            <span className="text-[10px] uppercase tracking-widest text-stone-400">Live Status:</span>
-            <div className="relative">
-              <input type="checkbox" checked={formData.isPublished || false} onChange={handleTogglePublish} className="sr-only peer" />
-              <div className="w-10 h-5 bg-stone-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white peer-checked:after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--tarius-olive)]"></div>
-            </div>
-            <span className={"text-[10px] uppercase tracking-widest font-bold " + (formData.isPublished ? "text-[var(--tarius-olive)]" : "text-stone-400")}>
-              {formData.isPublished ? 'Published' : 'Draft'}
-            </span>
-          </label>
-        </div>
-
-        {/* The Live Visual Builder Area */}
-        <div className="p-8 md:p-12 bg-[var(--tarius-ivory)] relative min-h-[400px]">
-          
-          {/* Template A: Spotlight */}
-          {isSpotlight && (
-            <div className="flex flex-col md:flex-row gap-12 items-center">
-              <div className="w-full md:w-1/2 flex flex-col items-center justify-center text-center">
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title || ''}
-                  onChange={handleInputChange}
-                  placeholder="CERTIFICATION TITLE..."
-                  className="w-full bg-transparent border-b border-transparent hover:border-[var(--tarius-border)] focus:border-[var(--tarius-olive)] font-display text-4xl text-[var(--tarius-graphite)] text-center py-2 focus:outline-none transition-colors mb-6 placeholder-stone-300"
-                />
-                <textarea
-                  name="description"
-                  value={formData.description || ''}
-                  onChange={handleInputChange}
-                  placeholder="Enter a detailed description of the certification criteria and meaning..."
-                  rows={4}
-                  className="w-full bg-transparent border-b border-transparent hover:border-[var(--tarius-border)] focus:border-[var(--tarius-olive)] text-stone-600 text-center py-2 focus:outline-none transition-colors resize-none placeholder-stone-300 leading-relaxed"
-                />
-              </div>
-              <div className="w-full md:w-1/2 relative bg-white border border-[var(--tarius-border)] h-[400px] flex items-center justify-center overflow-hidden group shadow-lg">
-                
-                {/* PDF Dropzone inside Canvas */}
-                {thumbnailPreview ? (
-                  <>
-                    <img src={thumbnailPreview} alt="Preview" className="w-full h-full object-cover opacity-90 mix-blend-multiply" />
-                    <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                      <span className="bg-white text-[var(--tarius-graphite)] text-[10px] uppercase tracking-widest px-4 py-2 border border-[var(--tarius-border)] hover:bg-[var(--tarius-olive)] hover:text-white transition-colors">Replace PDF</span>
-                      <input type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} />
-                    </label>
-                  </>
-                ) : (
-                  <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center p-6 bg-black/5 hover:bg-black/10 transition-colors text-center">
-                    {isProcessingPdf ? (
-                      <div className="w-8 h-8 rounded-full border-2 border-[var(--tarius-border)] border-t-[var(--tarius-olive)] animate-spin mb-2"></div>
-                    ) : (
-                      <>
-                        <svg className="text-stone-400 w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                        <span className="text-[10px] uppercase tracking-widest text-[var(--tarius-graphite)]">Drop PDF Here</span>
-                      </>
-                    )}
-                    <input type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} />
-                  </label>
-                )}
-                
-              </div>
-            </div>
-          )}
-
-          {/* Template B: Dossier Grid */}
-          {isGrid && (
-            <div className="max-w-sm mx-auto bg-white border border-[var(--tarius-border)] shadow-md overflow-hidden group">
-              <div className="h-[250px] bg-[var(--tarius-ivory-deep)] relative flex items-center justify-center border-b border-[var(--tarius-border)]">
-                 
-                 {/* PDF Dropzone inside Canvas */}
-                 {thumbnailPreview ? (
-                  <>
-                    <img src={thumbnailPreview} alt="Preview" className="w-full h-full object-cover opacity-90 mix-blend-multiply" />
-                    <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                      <span className="bg-white text-[var(--tarius-graphite)] text-[10px] uppercase tracking-widest px-4 py-2 hover:bg-[var(--tarius-olive)] hover:text-white transition-colors">Replace PDF</span>
-                      <input type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} />
-                    </label>
-                  </>
-                ) : (
-                  <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center p-6 bg-black/5 hover:bg-black/10 transition-colors text-center">
-                    {isProcessingPdf ? (
-                      <div className="w-8 h-8 rounded-full border-2 border-[var(--tarius-border)] border-t-[var(--tarius-olive)] animate-spin mb-2"></div>
-                    ) : (
-                      <>
-                        <svg className="text-stone-400 w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                        <span className="text-[10px] uppercase tracking-widest text-[var(--tarius-graphite)]">Drop PDF</span>
-                      </>
-                    )}
-                    <input type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} />
-                  </label>
-                )}
-
-              </div>
-              <div className="p-6">
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title || ''}
-                  onChange={handleInputChange}
-                  placeholder="Document Title"
-                  className="w-full bg-transparent border-b border-transparent hover:border-[var(--tarius-border)] focus:border-[var(--tarius-olive)] font-display text-2xl text-[var(--tarius-graphite)] py-1 focus:outline-none transition-colors mb-3 placeholder-stone-300"
-                />
-                <textarea
-                  name="description"
-                  value={formData.description || ''}
-                  onChange={handleInputChange}
-                  placeholder="Brief document notes..."
-                  rows={2}
-                  className="w-full bg-transparent border-b border-transparent hover:border-[var(--tarius-border)] focus:border-[var(--tarius-olive)] text-sm text-stone-500 py-1 focus:outline-none transition-colors resize-none placeholder-stone-300"
-                />
-                <div className="mt-4 pt-4 border-t border-[var(--tarius-border)] text-[10px] uppercase tracking-widest text-[var(--tarius-olive)] text-center">
-                  Mock Button: View Document
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Template C: Ledger */}
-          {isLedger && (
-            <div className="max-w-3xl mx-auto bg-white border border-[var(--tarius-border)] flex items-center justify-between p-6">
-              <div className="flex-1 pr-8">
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title || ''}
-                  onChange={handleInputChange}
-                  placeholder="Regulatory Filing Name"
-                  className="w-full bg-transparent border-b border-transparent hover:border-[var(--tarius-border)] focus:border-[var(--tarius-olive)] font-medium text-[var(--tarius-graphite)] py-1 focus:outline-none transition-colors placeholder-stone-300"
-                />
-                <input
-                  type="text"
-                  name="description"
-                  value={formData.description || ''}
-                  onChange={handleInputChange}
-                  placeholder="Date / Reference Number..."
-                  className="w-full bg-transparent border-b border-transparent hover:border-[var(--tarius-border)] focus:border-[var(--tarius-olive)] text-xs text-stone-500 py-1 focus:outline-none transition-colors mt-1 placeholder-stone-300"
-                />
-              </div>
-              <div className="w-[100px] shrink-0 border-l border-[var(--tarius-border)] pl-6 flex flex-col items-center gap-2 group relative">
-                
-                {/* PDF Dropzone inside Canvas */}
-                {thumbnailPreview ? (
-                  <>
-                    <img src={thumbnailPreview} alt="Preview" className="w-10 h-14 object-cover opacity-90 mix-blend-multiply" />
-                    <label className="absolute inset-0 bg-white/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                      <svg className="w-4 h-4 text-[var(--tarius-graphite)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                      <input type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} />
-                    </label>
-                  </>
-                ) : (
-                  <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center p-2 bg-black/5 hover:bg-black/10 transition-colors text-center">
-                    {isProcessingPdf ? (
-                      <div className="w-4 h-4 rounded-full border border-[var(--tarius-border)] border-t-[var(--tarius-olive)] animate-spin mb-1"></div>
-                    ) : (
-                      <svg className="text-stone-400 w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                    )}
-                    <span className="text-[8px] uppercase tracking-widest text-stone-500">PDF</span>
-                    <input type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} />
-                  </label>
-                )}
-
-              </div>
-            </div>
-          )}
-
-        </div>
-
-        {/* Footer Actions */}
-        <div className="p-6 bg-stone-50 border-t border-[var(--tarius-border)] flex items-center justify-between">
-          <div>
-            {!isAdding && formData.id && (
-              <button onClick={() => handleDelete(formData.id as string)} className="text-[10px] uppercase tracking-widest text-red-600 hover:underline">
-                Delete Document
-              </button>
+      <div className="absolute inset-0 w-full h-full group/dropzone bg-[var(--tarius-ivory-deep)] flex items-center justify-center border border-[var(--tarius-border)] overflow-hidden">
+        {currentThumb ? (
+          <>
+            <img src={currentThumb} className="w-full h-full object-cover mix-blend-multiply opacity-90" alt="PDF Preview" />
+            <label className="absolute inset-0 bg-black/50 opacity-0 group-hover/dropzone:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
+              <span className="bg-white text-[var(--tarius-graphite)] text-[10px] uppercase tracking-widest px-4 py-2 hover:bg-[var(--tarius-olive)] hover:text-white transition-colors">Replace PDF</span>
+              <input type="file" accept="application/pdf" className="hidden" onChange={(e) => {
+                if (e.target.files?.[0]) handlePdfUpload(e.target.files[0], blockId, arrayField, itemIndex);
+              }} />
+            </label>
+          </>
+        ) : (
+          <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-black/5 transition-colors p-4 text-center">
+            {isProcessing ? (
+              <div className="w-6 h-6 rounded-full border-2 border-[var(--tarius-border)] border-t-[var(--tarius-olive)] animate-spin"></div>
+            ) : (
+              <>
+                <svg className={"text-stone-400 mb-1 " + (isMini ? "w-4 h-4" : "w-8 h-8")} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                {!isMini && <span className="text-[10px] uppercase tracking-widest text-stone-500">Drop PDF</span>}
+              </>
             )}
-          </div>
-          
-          <div className="flex items-center gap-6">
-             <div className="flex items-center gap-3 mr-4">
-              <label className="text-[10px] uppercase tracking-widest text-stone-500">Sort Priority:</label>
-              <input 
-                type="number" 
-                name="displayOrder" 
-                value={formData.displayOrder || 0} 
-                onChange={handleInputChange} 
-                className="w-16 bg-white border border-[var(--tarius-border)] px-2 py-1 text-xs focus:outline-none focus:border-[var(--tarius-olive)]" 
-              />
-            </div>
-            <button onClick={handleCancel} className="px-6 py-3 text-[10px] uppercase tracking-widest text-stone-500 hover:text-[var(--tarius-graphite)] transition-colors">
-              Cancel
-            </button>
-            <button onClick={handleSave} disabled={isSaving || isProcessingPdf} className="px-8 py-3 bg-[var(--tarius-graphite)] text-[var(--tarius-champagne)] text-[10px] uppercase tracking-widest hover:bg-[var(--tarius-olive)] hover:text-white transition-all disabled:opacity-50 shadow-sm rounded-sm">
-              {isSaving ? 'Saving...' : 'Deploy to Site'}
-            </button>
-          </div>
-        </div>
-
+            <input type="file" accept="application/pdf" className="hidden" onChange={(e) => {
+              if (e.target.files?.[0]) handlePdfUpload(e.target.files[0], blockId, arrayField, itemIndex);
+            }} />
+          </label>
+        )}
       </div>
     );
   };
 
-  return (
-    <div className="pb-24">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--tarius-olive)] mb-3">
-            Content Management System
-          </p>
-          <h1 className="font-display text-4xl md:text-5xl text-[var(--tarius-graphite)]">
-            Certifications Engine
-          </h1>
-        </div>
+  const renderImageDropzone = (blockId: string, currentImage: string) => {
+    const isProcessing = processingMediaId === blockId;
 
-        {!isAdding && !editingId && !isEditingSettings && (
-          <div className="flex gap-4">
-            <button
-              onClick={() => setIsEditingSettings(true)}
-              className="px-6 py-3 border border-[var(--tarius-border)] bg-white text-[10px] uppercase tracking-widest text-[var(--tarius-graphite)] hover:bg-[var(--tarius-ivory)] transition-all rounded-sm shadow-sm"
-            >
-              Configure Page Text
-            </button>
-            <button
-              onClick={handleAddNew}
-              className="px-6 py-3 border border-[var(--tarius-olive)] bg-[var(--tarius-olive)] text-[10px] uppercase tracking-widest text-white hover:bg-transparent hover:text-[var(--tarius-olive)] transition-all rounded-sm shadow-sm flex items-center gap-2"
-            >
-              + Add New Canvas Block
-            </button>
+    return (
+      <div className="absolute inset-0 w-full h-full group/dropzone bg-[var(--tarius-ivory-deep)] flex items-center justify-center border border-[var(--tarius-border)] overflow-hidden">
+        {currentImage ? (
+          <>
+            <img src={currentImage} className="w-full h-full object-cover opacity-90" alt="Banner Preview" />
+            <label className="absolute inset-0 bg-black/50 opacity-0 group-hover/dropzone:opacity-100 flex items-center justify-center cursor-pointer transition-opacity z-20">
+              <span className="bg-white text-[var(--tarius-graphite)] text-[10px] uppercase tracking-widest px-4 py-2 hover:bg-[var(--tarius-olive)] hover:text-white transition-colors">Replace Image</span>
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                if (e.target.files?.[0]) handleImageUpload(e.target.files[0], blockId);
+              }} />
+            </label>
+          </>
+        ) : (
+          <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-black/5 transition-colors p-4 text-center z-20">
+            {isProcessing ? (
+              <div className="w-6 h-6 rounded-full border-2 border-[var(--tarius-border)] border-t-[var(--tarius-olive)] animate-spin"></div>
+            ) : (
+              <>
+                <svg className="text-stone-400 mb-1 w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <span className="text-[10px] uppercase tracking-widest text-stone-500">Drop Banner Image</span>
+              </>
+            )}
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+              if (e.target.files?.[0]) handleImageUpload(e.target.files[0], blockId);
+            }} />
+          </label>
+        )}
+      </div>
+    );
+  };
+
+  const renderBlockControls = (block: Block, index: number) => (
+    <div className="absolute top-4 right-4 z-50 flex items-center gap-2 bg-white border border-[var(--tarius-border)] shadow-md p-1 opacity-0 group-hover/block:opacity-100 transition-opacity rounded-sm">
+      <span className="text-[9px] uppercase tracking-widest text-stone-400 px-2 border-r border-[var(--tarius-border)]">{block.type}</span>
+      <button onClick={() => moveBlock(index, -1)} disabled={index === 0} className="w-6 h-6 flex items-center justify-center text-stone-500 hover:bg-stone-100 disabled:opacity-30">↑</button>
+      <button onClick={() => moveBlock(index, 1)} disabled={index === blocks.length - 1} className="w-6 h-6 flex items-center justify-center text-stone-500 hover:bg-stone-100 disabled:opacity-30">↓</button>
+      <button onClick={() => removeBlock(block.id)} className="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-50 ml-1">✕</button>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex items-center gap-3 text-stone-500 text-xs uppercase tracking-widest">
+          <div className="w-4 h-4 rounded-full border border-stone-300 border-t-stone-600 animate-spin"></div>
+          Loading Visual Canvas...
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-[var(--tarius-ivory)] min-h-screen pb-40">
+      
+      {/* Sticky Top Toolbar with Dropdown */}
+      <div className="sticky top-0 z-50 bg-white border-b border-[var(--tarius-border)] shadow-sm px-8 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl text-[var(--tarius-graphite)]">Visual Page Builder</h1>
+          <p className="text-[10px] uppercase tracking-widest text-stone-500">Live Editing: /certifications</p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+          
+          <select 
+            className="w-full sm:w-auto bg-stone-50 border border-[var(--tarius-border)] px-4 py-2 text-[10px] uppercase tracking-widest text-[var(--tarius-graphite)] focus:outline-none focus:border-[var(--tarius-olive)] cursor-pointer"
+            onChange={(e) => {
+              if (e.target.value) {
+                addBlock(e.target.value);
+                e.target.value = "";
+              }
+            }}
+          >
+            <option value="">+ Insert Template Block...</option>
+            <optgroup label="Typography">
+              <option value="hero">Hero Header</option>
+              <option value="text">Rich Text Statement</option>
+            </optgroup>
+            <optgroup label="PDF Displays">
+              <option value="spotlight">Spotlight (Split Layout)</option>
+              <option value="dual_media">Dual Media (Side-by-Side PDFs)</option>
+              <option value="grid">Dossier Grid (3-Column Cards)</option>
+              <option value="single_pdf">Featured PDF (Large Card)</option>
+              <option value="ledger">Ledger List (Rows)</option>
+            </optgroup>
+            <optgroup label="Aesthetic & Structure">
+              <option value="overlay_banner">Text Overlay Banner</option>
+              <option value="image_banner">Standard Image Banner</option>
+              <option value="divider">Spacing Divider</option>
+            </optgroup>
+          </select>
+
+          <button 
+            onClick={handleSaveLayout} 
+            disabled={isSaving || processingMediaId !== null} 
+            className="w-full sm:w-auto px-8 py-2 bg-[var(--tarius-olive)] text-white text-[10px] uppercase tracking-widest hover:bg-[var(--tarius-graphite)] transition-colors disabled:opacity-50 rounded-sm"
+          >
+            {isSaving ? 'Publishing...' : 'Save & Publish'}
+          </button>
+        </div>
+      </div>
+
+      {/* The Visual Canvas */}
+      <div className="w-full flex flex-col items-center">
+        {blocks.map((block, index) => (
+          <div key={block.id} className="w-full relative group/block border-y border-transparent hover:border-[var(--tarius-olive)] transition-colors">
+            {renderBlockControls(block, index)}
+
+            {/* BLOCK: HERO */}
+            {block.type === 'hero' && (
+              <section className="pt-24 pb-16 flex flex-col items-center justify-center text-center px-4 bg-white border-b border-[var(--tarius-border)] w-full">
+                <div className="max-w-2xl mx-auto w-full flex flex-col items-center">
+                  <input 
+                    type="text" 
+                    value={block.content.eyebrow} 
+                    onChange={(e) => updateBlockContent(block.id, 'eyebrow', e.target.value)}
+                    className="text-[10px] uppercase tracking-[0.3em] text-[var(--tarius-olive)] mb-6 block text-center bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-full"
+                    placeholder="Eyebrow Text..."
+                  />
+                  
+                  <div className="relative w-full mb-6 group/select">
+                    <input 
+                      type="text" 
+                      value={block.content.title} 
+                      onChange={(e) => updateBlockContent(block.id, 'title', e.target.value)}
+                      className={"font-display text-[var(--tarius-graphite)] text-center bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-full " + block.content.titleSize}
+                      placeholder="Hero Title..."
+                    />
+                    <select 
+                      value={block.content.titleSize} 
+                      onChange={(e) => updateBlockContent(block.id, 'titleSize', e.target.value)}
+                      className="absolute -right-24 top-1/2 -translate-y-1/2 text-[10px] border border-stone-200 bg-white p-1 opacity-0 group-hover/select:opacity-100 transition-opacity"
+                    >
+                      <option value="text-5xl">5XL</option>
+                      <option value="text-6xl">6XL</option>
+                      <option value="text-7xl">7XL</option>
+                      <option value="text-8xl">8XL</option>
+                    </select>
+                  </div>
+
+                  <textarea 
+                    value={block.content.description} 
+                    onChange={(e) => updateBlockContent(block.id, 'description', e.target.value)}
+                    rows={3}
+                    className="text-stone-500 font-light leading-relaxed text-center bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-full resize-none"
+                    placeholder="Description paragraph..."
+                  />
+                </div>
+              </section>
+            )}
+
+            {/* BLOCK: TEXT */}
+            {block.type === 'text' && (
+              <section className="py-24 px-4 bg-white border-b border-[var(--tarius-border)] w-full relative">
+                <select 
+                  value={block.content.alignment} 
+                  onChange={(e) => updateBlockContent(block.id, 'alignment', e.target.value)}
+                  className="absolute top-4 left-4 text-[10px] border border-stone-200 bg-white p-1 opacity-0 group-hover/block:opacity-100 z-10 transition-opacity"
+                >
+                  <option value="left">Align Left</option>
+                  <option value="center">Align Center</option>
+                </select>
+                <div className={"max-w-4xl mx-auto flex flex-col gap-6 " + (block.content.alignment === 'center' ? 'items-center text-center' : 'items-start text-left')}>
+                  <input 
+                    type="text" 
+                    value={block.content.title} 
+                    onChange={(e) => updateBlockContent(block.id, 'title', e.target.value)}
+                    className={"font-display text-4xl text-[var(--tarius-graphite)] bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-full " + (block.content.alignment === 'center' ? 'text-center' : 'text-left')}
+                    placeholder="Section Title"
+                  />
+                  <textarea 
+                    value={block.content.description} 
+                    onChange={(e) => updateBlockContent(block.id, 'description', e.target.value)}
+                    rows={4}
+                    className={"text-stone-500 font-light leading-relaxed bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-full resize-none " + (block.content.alignment === 'center' ? 'text-center' : 'text-left')}
+                    placeholder="Write your paragraph here..."
+                  />
+                </div>
+              </section>
+            )}
+
+            {/* BLOCK: OVERLAY BANNER */}
+            {block.type === 'overlay_banner' && (
+              <section className="w-full border-y border-[var(--tarius-border)] relative">
+                <div className="absolute top-4 left-4 z-50 flex items-center gap-2 opacity-0 group-hover/block:opacity-100 transition-opacity">
+                  <select 
+                    value={block.content.height} 
+                    onChange={(e) => updateBlockContent(block.id, 'height', e.target.value)}
+                    className="text-[10px] border border-[var(--tarius-border)] bg-white p-1.5"
+                  >
+                    <option value="h-[400px]">Height: 400px</option>
+                    <option value="h-[500px]">Height: 500px</option>
+                    <option value="h-[700px]">Height: 700px</option>
+                  </select>
+                </div>
+                
+                <div className={"w-full relative flex items-center justify-center " + block.content.height}>
+                  {renderImageDropzone(block.id, block.content.imageUrl)}
+                  
+                  <div className="absolute inset-0 bg-black/40 pointer-events-none z-10"></div>
+                  
+                  <div className="relative z-20 w-full max-w-4xl mx-auto flex flex-col items-center text-center p-8 pointer-events-auto">
+                    <input 
+                      type="text" 
+                      value={block.content.title} 
+                      onChange={(e) => updateBlockContent(block.id, 'title', e.target.value)}
+                      className="font-display text-4xl lg:text-6xl text-white bg-transparent border-b border-transparent hover:border-white/30 focus:outline-none focus:border-white w-full text-center mb-4 placeholder-white/50"
+                      placeholder="Overlay Title"
+                    />
+                    <textarea 
+                      value={block.content.description} 
+                      onChange={(e) => updateBlockContent(block.id, 'description', e.target.value)}
+                      rows={3}
+                      className="text-white/80 font-light leading-relaxed bg-transparent border-b border-transparent hover:border-white/30 focus:outline-none focus:border-white w-full resize-none text-center placeholder-white/50"
+                      placeholder="Overlay description text..."
+                    />
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* BLOCK: SPOTLIGHT */}
+            {block.type === 'spotlight' && (
+              <section className={"w-full py-24 px-4 sm:px-8 border-b border-[var(--tarius-border)] " + (index % 2 === 0 ? "bg-[var(--tarius-ivory)]" : "bg-white")}>
+                
+                {/* NEW: Left/Right Swap Toggle */}
+                <div className="absolute top-4 left-4 z-50 flex items-center bg-white border border-[var(--tarius-border)] p-1 opacity-0 group-hover/block:opacity-100 transition-opacity rounded-sm">
+                  <button onClick={() => updateBlockContent(block.id, 'mediaPosition', 'left')} className={"px-3 py-1 text-[9px] uppercase tracking-widest transition-colors " + (block.content.mediaPosition !== 'right' ? 'bg-[var(--tarius-olive)] text-white' : 'text-stone-500 hover:bg-stone-100')}>PDF Left</button>
+                  <button onClick={() => updateBlockContent(block.id, 'mediaPosition', 'right')} className={"px-3 py-1 text-[9px] uppercase tracking-widest transition-colors " + (block.content.mediaPosition === 'right' ? 'bg-[var(--tarius-olive)] text-white' : 'text-stone-500 hover:bg-stone-100')}>PDF Right</button>
+                </div>
+
+                <div className={"max-w-6xl mx-auto flex flex-col gap-12 items-center " + (block.content.mediaPosition === 'right' ? "md:flex-row-reverse" : "md:flex-row")}>
+                  <div className="w-full md:w-1/2 flex justify-center">
+                    <div className="relative w-full max-w-md bg-white p-4 border border-[var(--tarius-border)] shadow-2xl">
+                      <div className="w-full h-[500px] relative">
+                        {renderPdfDropzone(block.id, block.content.thumbnailUrl)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="w-full md:w-1/2 flex flex-col gap-4 text-left px-4">
+                    <input 
+                      type="text" 
+                      value={block.content.label} 
+                      onChange={(e) => updateBlockContent(block.id, 'label', e.target.value)}
+                      className="text-[10px] uppercase tracking-[0.3em] text-[var(--tarius-olive)] bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-full"
+                      placeholder="Tagline (e.g. Official Filing)"
+                    />
+                    <input 
+                      type="text" 
+                      value={block.content.title} 
+                      onChange={(e) => updateBlockContent(block.id, 'title', e.target.value)}
+                      className="font-display text-4xl lg:text-5xl text-[var(--tarius-graphite)] leading-tight bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-full"
+                      placeholder="Spotlight Title"
+                    />
+                    <textarea 
+                      value={block.content.description} 
+                      onChange={(e) => updateBlockContent(block.id, 'description', e.target.value)}
+                      rows={4}
+                      className="text-sm font-light leading-relaxed text-stone-600 bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-full resize-none mt-2"
+                      placeholder="Detailed description..."
+                    />
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* BLOCK: DUAL MEDIA (Side-By-Side) */}
+            {block.type === 'dual_media' && (
+              <section className="w-full py-24 px-4 sm:px-8 bg-white border-b border-[var(--tarius-border)]">
+                <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-12">
+                  {block.content.items && block.content.items.map((item: any, i: number) => (
+                    <div key={i} className="w-full md:w-1/2 flex flex-col gap-6">
+                      <div className="w-full h-[500px] relative border border-[var(--tarius-border)] bg-[var(--tarius-ivory-deep)] shadow-lg">
+                        {renderPdfDropzone(block.id, item.thumbnailUrl, 'items', i)}
+                      </div>
+                      <div className="flex flex-col gap-2 text-center md:text-left px-2">
+                        <input 
+                          type="text" 
+                          value={item.title} 
+                          onChange={(e) => updateBlockArrayItem(block.id, 'items', i, 'title', e.target.value)}
+                          className="font-display text-2xl text-[var(--tarius-graphite)] bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-full"
+                          placeholder="Document Title"
+                        />
+                        <textarea 
+                          value={item.description} 
+                          onChange={(e) => updateBlockArrayItem(block.id, 'items', i, 'description', e.target.value)}
+                          rows={3}
+                          className="text-sm font-light leading-relaxed text-stone-500 bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-full resize-none"
+                          placeholder="Document description..."
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* BLOCK: SINGLE PDF */}
+            {block.type === 'single_pdf' && (
+              <section className="py-24 px-4 bg-white border-b border-[var(--tarius-border)] w-full">
+                <div className="max-w-3xl mx-auto flex flex-col items-center gap-8">
+                  <div className="w-full h-[500px] relative border border-[var(--tarius-border)] shadow-xl">
+                    {renderPdfDropzone(block.id, block.content.thumbnailUrl)}
+                  </div>
+                  <div className="w-full flex flex-col items-center text-center gap-4">
+                    <input 
+                      type="text" 
+                      value={block.content.title} 
+                      onChange={(e) => updateBlockContent(block.id, 'title', e.target.value)}
+                      className="font-display text-3xl text-[var(--tarius-graphite)] leading-tight bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-full text-center"
+                      placeholder="Featured Document Title"
+                    />
+                    <textarea 
+                      value={block.content.description} 
+                      onChange={(e) => updateBlockContent(block.id, 'description', e.target.value)}
+                      rows={2}
+                      className="text-sm font-light leading-relaxed text-stone-500 bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-full resize-none text-center"
+                      placeholder="Short description..."
+                    />
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* BLOCK: GRID */}
+            {block.type === 'grid' && (
+              <section className="max-w-7xl mx-auto px-4 sm:px-8 py-24">
+                <div className="text-center mb-12 flex flex-col items-center">
+                  <input 
+                    type="text" 
+                    value={block.content.sectionTitle} 
+                    onChange={(e) => updateBlockContent(block.id, 'sectionTitle', e.target.value)}
+                    className="font-display text-3xl text-[var(--tarius-graphite)] mb-2 text-center bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)]"
+                    placeholder="Section Title"
+                  />
+                  <input 
+                    type="text" 
+                    value={block.content.sectionSubtitle} 
+                    onChange={(e) => updateBlockContent(block.id, 'sectionSubtitle', e.target.value)}
+                    className="text-[10px] uppercase tracking-[0.2em] text-stone-500 text-center bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-[300px]"
+                    placeholder="Section Subtitle"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {block.content.cards.map((card: any, cardIndex: number) => (
+                    <div key={cardIndex} className="bg-white border border-[var(--tarius-border)] shadow-sm flex flex-col relative group/card">
+                      <button onClick={() => removeArrayItem(block.id, 'cards', cardIndex)} className="absolute top-2 right-2 z-30 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover/card:opacity-100 text-xs flex items-center justify-center">✕</button>
+                      <div className="h-[250px] relative border-b border-[var(--tarius-border)]">
+                        {renderPdfDropzone(block.id, card.thumbnailUrl, 'cards', cardIndex)}
+                      </div>
+                      <div className="p-6 flex flex-col flex-1">
+                        <input 
+                          type="text" 
+                          value={card.title} 
+                          onChange={(e) => updateBlockArrayItem(block.id, 'cards', cardIndex, 'title', e.target.value)}
+                          className="font-display text-xl text-[var(--tarius-graphite)] mb-2 bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-full"
+                          placeholder="Card Title"
+                        />
+                        <textarea 
+                          value={card.description} 
+                          onChange={(e) => updateBlockArrayItem(block.id, 'cards', cardIndex, 'description', e.target.value)}
+                          rows={2}
+                          className="text-xs font-light text-stone-500 bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-full resize-none"
+                          placeholder="Card description..."
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  <button onClick={() => addArrayItem(block.id, 'cards', 'grid')} className="h-full min-h-[300px] border-2 border-dashed border-stone-300 flex items-center justify-center text-stone-400 hover:border-[var(--tarius-olive)] hover:text-[var(--tarius-olive)] transition-colors bg-white/50">
+                    + Add Card
+                  </button>
+                </div>
+              </section>
+            )}
+
+            {/* BLOCK: LEDGER */}
+            {block.type === 'ledger' && (
+              <section className="max-w-4xl mx-auto px-4 sm:px-8 py-24 border-t border-[var(--tarius-border)]">
+                <div className="text-center mb-8 flex flex-col items-center">
+                  <input 
+                    type="text" 
+                    value={block.content.sectionTitle} 
+                    onChange={(e) => updateBlockContent(block.id, 'sectionTitle', e.target.value)}
+                    className="font-display text-2xl text-[var(--tarius-graphite)] mb-2 text-center bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)]"
+                    placeholder="Ledger Title"
+                  />
+                  <input 
+                    type="text" 
+                    value={block.content.sectionSubtitle} 
+                    onChange={(e) => updateBlockContent(block.id, 'sectionSubtitle', e.target.value)}
+                    className="text-[10px] uppercase tracking-[0.2em] text-stone-500 text-center bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-[300px]"
+                    placeholder="Ledger Subtitle"
+                  />
+                </div>
+
+                <div className="flex flex-col border-t border-[var(--tarius-border)]">
+                  {block.content.items.map((item: any, itemIndex: number) => (
+                    <div key={itemIndex} className="w-full bg-white border-b border-[var(--tarius-border)] p-4 flex items-center gap-6 relative group/item">
+                      <button onClick={() => removeArrayItem(block.id, 'items', itemIndex)} className="absolute -left-10 top-1/2 -translate-y-1/2 text-red-500 opacity-0 group-hover/item:opacity-100">✕</button>
+                      <div className="w-16 h-16 shrink-0 relative">
+                         {renderPdfDropzone(block.id, item.thumbnailUrl, 'items', itemIndex, true)}
+                      </div>
+                      <div className="flex-1 flex flex-col gap-1">
+                        <input 
+                          type="text" 
+                          value={item.title} 
+                          onChange={(e) => updateBlockArrayItem(block.id, 'items', itemIndex, 'title', e.target.value)}
+                          className="text-sm font-medium text-[var(--tarius-graphite)] bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-full"
+                          placeholder="Item Title"
+                        />
+                        <input 
+                          type="text" 
+                          value={item.description} 
+                          onChange={(e) => updateBlockArrayItem(block.id, 'items', itemIndex, 'description', e.target.value)}
+                          className="text-xs text-stone-500 bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-[var(--tarius-olive)] w-full"
+                          placeholder="Description or Date"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  <button onClick={() => addArrayItem(block.id, 'items', 'ledger')} className="w-full p-4 border-b border-[var(--tarius-border)] text-[10px] uppercase tracking-widest text-[var(--tarius-olive)] hover:bg-stone-50 transition-colors text-center">
+                    + Add Ledger Row
+                  </button>
+                </div>
+              </section>
+            )}
+
+            {/* BLOCK: IMAGE BANNER */}
+            {block.type === 'image_banner' && (
+              <section className="w-full border-y border-[var(--tarius-border)] relative group/banner">
+                <select 
+                  value={block.content.height} 
+                  onChange={(e) => updateBlockContent(block.id, 'height', e.target.value)}
+                  className="absolute top-4 left-4 text-[10px] border border-stone-200 bg-white p-1 opacity-0 group-hover/banner:opacity-100 z-30"
+                >
+                  <option value="h-[300px]">Height: Small (300px)</option>
+                  <option value="h-[400px]">Height: Medium (400px)</option>
+                  <option value="h-[600px]">Height: Large (600px)</option>
+                  <option value="min-h-screen">Height: Full Screen</option>
+                </select>
+                <div className={"w-full relative " + block.content.height}>
+                  {renderImageDropzone(block.id, block.content.imageUrl)}
+                </div>
+              </section>
+            )}
+
+            {/* BLOCK: DIVIDER */}
+            {block.type === 'divider' && (
+              <section className="w-full py-16 flex items-center justify-center relative group/divider bg-[var(--tarius-ivory)]">
+                <select 
+                  value={block.content.style} 
+                  onChange={(e) => updateBlockContent(block.id, 'style', e.target.value)}
+                  className="absolute top-2 left-4 text-[10px] border border-stone-200 bg-white p-1 opacity-0 group-hover/divider:opacity-100 z-10"
+                >
+                  <option value="line">Solid Line</option>
+                  <option value="whitespace">Empty Whitespace</option>
+                </select>
+                {block.content.style === 'line' ? (
+                  <div className="w-full max-w-4xl border-t border-[var(--tarius-border)]"></div>
+                ) : (
+                  <div className="h-8"></div>
+                )}
+              </section>
+            )}
+
+          </div>
+        ))}
+
+        {blocks.length === 0 && (
+          <div className="mt-32 p-16 text-center border-2 border-dashed border-stone-300 rounded-sm">
+            <p className="text-stone-500 font-light">The canvas is completely empty.</p>
+            <p className="text-[10px] uppercase tracking-widest text-[var(--tarius-olive)] mt-2">Use the top toolbar to insert a block.</p>
           </div>
         )}
       </div>
-
-      {loading ? (
-        <div className="flex items-center gap-3 text-stone-500 text-xs uppercase tracking-widest">
-          <div className="w-4 h-4 rounded-full border border-stone-300 border-t-stone-600 animate-spin"></div>
-          Loading CMS...
-        </div>
-      ) : (
-        <>
-          {isEditingSettings ? (
-            renderPageSettings()
-          ) : (isAdding || editingId) ? (
-            renderCanvas()
-          ) : (
-            <div className="space-y-4">
-              {certifications.length === 0 ? (
-                <div className="bg-white border border-[var(--tarius-border)] p-12 text-center rounded-sm">
-                  <p className="text-stone-500 font-light text-sm">Your certification portfolio is currently empty.</p>
-                </div>
-              ) : (
-                certifications.map((cert) => (
-                  <div key={cert.id} className="bg-white border border-[var(--tarius-border)] p-4 flex items-center justify-between group hover:border-[var(--tarius-olive)] transition-colors rounded-sm shadow-sm">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-[var(--tarius-ivory)] border border-[var(--tarius-border)] rounded-sm overflow-hidden flex items-center justify-center shrink-0">
-                        {cert.thumbnailUrl ? (
-                          <img src={cert.thumbnailUrl} alt="thumb" className="w-full h-full object-cover" />
-                        ) : (
-                          <svg className="w-4 h-4 text-stone-300" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd"></path></svg>
-                        )}
-                      </div>
-                      <div>
-                        <h4 className="text-[var(--tarius-graphite)] font-medium text-sm">{cert.title || 'Untitled Document'}</h4>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="text-[9px] uppercase tracking-widest text-stone-500 border border-stone-200 px-2 py-0.5 rounded-sm">
-                            {cert.templateType} Layout
-                          </span>
-                          <span className={"text-[9px] uppercase tracking-widest font-bold " + (cert.isPublished ? "text-emerald-600" : "text-amber-600")}>
-                            {cert.isPublished ? 'Live' : 'Draft'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <button onClick={() => handleEdit(cert)} className="px-4 py-2 border border-transparent text-[var(--tarius-graphite)] text-[10px] uppercase tracking-widest group-hover:border-[var(--tarius-olive)] transition-all rounded-sm">
-                      Open Canvas
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-        </>
-      )}
     </div>
   );
 }
