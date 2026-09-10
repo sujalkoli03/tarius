@@ -41,6 +41,9 @@ export default function AdminProducts() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [adminEmail, setAdminEmail] = useState<string>('');
+  
+  // NEW: State to hold the physical image file before upload
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [sortOption, setSortOption] = useState<string>('newest');
@@ -79,6 +82,7 @@ export default function AdminProducts() {
   const handleEditClick = (product: Product) => {
     setIsAdding(false);
     setEditingId(product.id);
+    setImageFile(null); // Reset pending uploads
     
     const productData = { ...product };
     if (!productData.purchaseLinks) {
@@ -91,6 +95,8 @@ export default function AdminProducts() {
   const handleAddClick = () => {
     setEditingId(null);
     setIsAdding(true);
+    setImageFile(null); // Reset pending uploads
+    
     setFormData({
       id: "prod_" + Math.random().toString(36).substr(2, 9),
       name: '',
@@ -112,6 +118,7 @@ export default function AdminProducts() {
     setEditingId(null);
     setIsAdding(false);
     setFormData({});
+    setImageFile(null); // Reset pending uploads
   };
 
   const handleInputChange = (
@@ -161,20 +168,21 @@ export default function AdminProducts() {
       alert('Please drop a valid image file.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setFormData((prev) => ({
-        ...prev,
-        image: event.target?.result as string,
-      }));
-    };
-    reader.readAsDataURL(file);
+    
+    // 1. Hold the actual file in state for upload during Save
+    setImageFile(file);
+    
+    // 2. Create a temporary local URL so the admin can preview the image immediately
+    setFormData((prev) => ({
+      ...prev,
+      image: URL.createObjectURL(file),
+    }));
   };
-
-  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSaving(true);
 
+    // 1. Instantiate the secure client with your browser session
     const supabaseAuth = createBrowserClient(
       process.env['NEXT_PUBLIC_SUPABASE_URL'] as string,
       process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] as string
@@ -183,15 +191,42 @@ export default function AdminProducts() {
     const { data: { user } } = await supabaseAuth.auth.getUser();
     const currentEmail = user?.email || 'System Admin';
 
+    let finalImageUrl = formData.image;
+
+    if (imageFile) {
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = "prod_" + Date.now() + "_" + Math.random().toString(36).substring(2, 9) + "." + fileExt;
+      
+      // FIX: Use supabaseAuth here so your admin credentials are sent with the upload
+      const { error: uploadError } = await supabaseAuth.storage
+        .from('products')
+        .upload(fileName, imageFile);
+        
+      if (uploadError) {
+        console.error('Error uploading image to bucket:', uploadError);
+        alert('Failed to upload image securely to the cloud.');
+        setIsSaving(false);
+        return;
+      }
+      
+      const { data: publicUrlData } = supabaseAuth.storage
+        .from('products')
+        .getPublicUrl(fileName);
+        
+      finalImageUrl = publicUrlData.publicUrl;
+    }
+
     const payload = {
       ...formData,
+      image: finalImageUrl,
       slug: formData.name ? formData.name.toLowerCase().replace(/\s+/g, '-') : '',
       updatedAt: new Date().toISOString(),
       updatedBy: currentEmail
     };
 
     if (isAdding) {
-      const { error } = await supabase
+      // FIX: Use supabaseAuth for the database insert
+      const { error } = await supabaseAuth
         .from('Product')
         .insert([payload]);
       
@@ -200,7 +235,8 @@ export default function AdminProducts() {
         alert('Failed to create product.');
       }
     } else if (editingId) {
-      const { error } = await supabase
+      // FIX: Use supabaseAuth for the database update
+      const { error } = await supabaseAuth
         .from('Product')
         .update(payload)
         .eq('id', editingId);
@@ -215,6 +251,7 @@ export default function AdminProducts() {
     setEditingId(null);
     setIsAdding(false);
     setFormData({});
+    setImageFile(null); 
     await fetchProducts();
   };
 
@@ -376,7 +413,10 @@ export default function AdminProducts() {
               {formData.image ? (
                 <div className="relative w-full h-40 overflow-hidden bg-black/5 flex items-center justify-center border border-[var(--tarius-border)]">
                   <img src={formData.image} alt="Preview" className="max-h-full object-contain" />
-                  <button type="button" onClick={() => setFormData(prev => ({...prev, image: ''}))} className="absolute top-2 right-2 bg-white text-red-500 text-[10px] uppercase tracking-widest px-3 py-1 shadow-md border border-[var(--tarius-border)]">Remove</button>
+                  <button type="button" onClick={() => {
+                    setFormData(prev => ({...prev, image: ''}));
+                    setImageFile(null);
+                  }} className="absolute top-2 right-2 bg-white text-red-500 text-[10px] uppercase tracking-widest px-3 py-1 shadow-md border border-[var(--tarius-border)]">Remove</button>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-2">
@@ -404,7 +444,10 @@ export default function AdminProducts() {
                 type="url"
                 name="image"
                 value={formData.image || ''}
-                onChange={handleInputChange}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  setImageFile(null); // Clear pending local file if they manually paste a URL
+                }}
                 className="w-full bg-transparent border-b border-[var(--tarius-border)] py-3 text-[var(--tarius-graphite)] text-sm focus:outline-none focus:border-[var(--tarius-olive)] transition-colors peer placeholder-transparent"
                 placeholder="Or Paste Image Link"
               />
