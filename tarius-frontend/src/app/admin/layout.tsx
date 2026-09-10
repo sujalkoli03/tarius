@@ -38,9 +38,10 @@ export default function AdminLayout({
   }
 
   // SIMPLIFIED NAVIGATION NAMES
-  const navItems = [
+const navItems = [
     { name: 'Analytics', href: '/admin/analytics' },
     { name: 'Products', href: '/admin/products' },
+    { name: 'Certifications', href: '/admin/certifications' }, // ADD THIS LINE
     { name: 'FAQs', href: '/admin/faqs' },
     { name: 'Inquiries', href: '/admin/inquiries' },
   ];
