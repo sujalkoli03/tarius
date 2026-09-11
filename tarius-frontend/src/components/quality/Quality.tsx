@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 interface Pillar {
   num: string;
@@ -40,7 +41,7 @@ export default function Quality(props: { id?: string }) {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
           {pillars.map((pillar, idx) => (
             <div key={idx} className="border border-[var(--tarius-champagne)]/30 p-8 sm:p-10 hover:bg-[var(--tarius-white)]/5 transition-colors duration-500 group">
               <span className="font-display text-3xl text-[var(--tarius-champagne)] block mb-6 group-hover:translate-x-1 transition-transform">
@@ -50,6 +51,15 @@ export default function Quality(props: { id?: string }) {
               <p className="text-stone-300 text-xs sm:text-sm font-light leading-relaxed">{pillar.desc}</p>
             </div>
           ))}
+        </div>
+
+        <div className="flex justify-center">
+          <Link
+            href="/certifications"
+            className="inline-flex items-center justify-center min-h-[3rem] px-8 py-3 bg-transparent border border-[var(--tarius-champagne)] text-[var(--tarius-champagne)] font-semibold text-[0.68rem] tracking-[0.16em] uppercase transition-all duration-300 hover:bg-[var(--tarius-champagne)] hover:text-[var(--tarius-graphite)] shadow-[0_0_15px_rgba(238,226,204,0.1)]"
+          >
+            View Certifications
+          </Link>
         </div>
       </div>
     </section>
