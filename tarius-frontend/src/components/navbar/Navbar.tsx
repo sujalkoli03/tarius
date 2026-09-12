@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const navigation = [
   { label: "Shop", href: "/products" },
@@ -16,9 +16,28 @@ const navigation = [
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   const closeMenu = () => {
     setIsMenuOpen(false);
+  };
+
+  const handleFaqClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+  
+    if (pathname === "/") return;
+    e.preventDefault();
+    router.push("/#faq");
+    let attempts = 0;
+    const tryScroll = () => {
+      const el = document.getElementById("faq");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+      } else if (attempts < 40) {
+        attempts += 1;
+        window.setTimeout(tryScroll, 50);
+      }
+    };
+    window.setTimeout(tryScroll, 50);
   };
 
   // Do not render the public navbar on any admin route
@@ -55,6 +74,7 @@ export default function Navbar() {
             <Link
               key={item.label}
               href={item.href}
+              onClick={item.href === "/#faq" ? handleFaqClick : undefined}
               className="text-eyebrow relative py-2 text-[var(--tarius-graphite)] transition-opacity duration-200 hover:opacity-60"
             >
               {item.label}
@@ -100,7 +120,7 @@ export default function Navbar() {
             <Link
               key={item.label}
               href={item.href}
-              onClick={closeMenu}
+              onClick={(e) => { closeMenu(); if (item.href === "/#faq") handleFaqClick(e); }}
               className="border-b border-[var(--tarius-border)] py-4 text-sm font-medium uppercase tracking-[0.14em]"
             >
               {item.label}

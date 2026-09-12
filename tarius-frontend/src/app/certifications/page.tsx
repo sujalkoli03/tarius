@@ -68,7 +68,7 @@ export default function CertificationsPage() {
             // --- HERO BLOCK ---
             if (block.type === 'hero') {
               return (
-                <section key={block.id} className="pt-32 pb-20 flex flex-col items-center justify-center text-center px-4 relative z-0 border-b border-[var(--tarius-border)] bg-white w-full">
+                <section key={block.id} className="pt-32 pb-20 flex flex-col items-center justify-center text-center px-4 relative overflow-hidden z-0 border-b border-[var(--tarius-border)] bg-white w-full">
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[var(--tarius-champagne)]/10 rounded-full blur-[100px] pointer-events-none z-0"></div>
                   <div className="relative z-10 max-w-2xl mx-auto w-full flex flex-col items-center">
                     <span className="text-[10px] uppercase tracking-[0.3em] text-[var(--tarius-olive)] mb-6 block text-center">
