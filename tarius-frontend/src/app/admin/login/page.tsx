@@ -109,11 +109,6 @@ export default function AdminLogin() {
                   Password
                 </label>
               </div>
-              <div className="text-right">
-                <Link href="/admin/forgot-password" className="text-[10px] tracking-widest text-[var(--tarius-champagne)] hover:brightness-125 transition-colors">
-                  Forgot Passphrase?
-                </Link>
-              </div>
             </div>
 
             {errorMsg && (
@@ -132,8 +127,8 @@ export default function AdminLogin() {
               </button>
 
               <div className="text-center">
-                <Link href="/admin/forgot-password" className="text-[10px] tracking-widest uppercase text-[var(--tarius-champagne)] font-medium hover:brightness-125 transition-colors border-b-2 border-[var(--tarius-champagne)] pb-1">
-                  Forgot Passphrase?
+                <Link href="/admin/forgot-password" className="text-[10px] tracking-widest uppercase text-white! font-medium hover:text-[var(--tarius-champagne)]! transition-colors border-b-2 border-[var(--tarius-champagne)] pb-1">
+                  Forgot Password
                 </Link>
               </div>
             </div>
