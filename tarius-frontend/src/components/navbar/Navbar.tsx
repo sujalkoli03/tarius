@@ -22,14 +22,10 @@ export default function Navbar() {
     setIsMenuOpen(false);
   };
 
-  const handleFaqClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-  
-    if (pathname === "/") return;
-    e.preventDefault();
-    router.push("/#faq");
+  const scrollToSection = (id: string) => {
     let attempts = 0;
     const tryScroll = () => {
-      const el = document.getElementById("faq");
+      const el = document.getElementById(id);
       if (el) {
         el.scrollIntoView({ behavior: "smooth" });
       } else if (attempts < 40) {
@@ -38,6 +34,14 @@ export default function Navbar() {
       }
     };
     window.setTimeout(tryScroll, 50);
+  };
+
+  const handleSectionClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    const id = href.replace(/^\/#/, "");
+    if (!id || pathname === "/") return;
+    e.preventDefault();
+    router.push(href);
+    scrollToSection(id);
   };
 
   // Do not render the public navbar on any admin route
@@ -74,7 +78,7 @@ export default function Navbar() {
             <Link
               key={item.label}
               href={item.href}
-              onClick={item.href === "/#faq" ? handleFaqClick : undefined}
+              onClick={item.href.startsWith("/#") ? (e) => handleSectionClick(e, item.href) : undefined}
               className="text-eyebrow relative py-2 text-[var(--tarius-graphite)] transition-opacity duration-200 hover:opacity-60"
             >
               {item.label}
@@ -83,6 +87,7 @@ export default function Navbar() {
 
           <Link
             href="/#contact"
+            onClick={(e) => handleSectionClick(e, "/#contact")}
             className="btn-tarius ml-2"
           >
             Explore TARIUS
@@ -120,7 +125,7 @@ export default function Navbar() {
             <Link
               key={item.label}
               href={item.href}
-              onClick={(e) => { closeMenu(); if (item.href === "/#faq") handleFaqClick(e); }}
+              onClick={(e) => { closeMenu(); handleSectionClick(e, item.href); }}
               className="border-b border-[var(--tarius-border)] py-4 text-sm font-medium uppercase tracking-[0.14em]"
             >
               {item.label}
@@ -129,7 +134,7 @@ export default function Navbar() {
 
           <Link
             href="/#contact"
-            onClick={closeMenu}
+            onClick={(e) => { closeMenu(); handleSectionClick(e, "/#contact"); }}
             className="btn-tarius mt-5 w-full"
           >
             Explore TARIUS
