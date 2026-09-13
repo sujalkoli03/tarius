@@ -4,14 +4,69 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+
+const collectionLinks = [
+  { label: "Genesis", href: "/#story" },
+  { label: "Provenance", href: "/#quality" },
+  { label: "Inquiries", href: "/#faq" },
+];
+
+const conciergeLinks = [
+  { label: "Private Allocation", href: "/#contact" },
+  { label: "Advisory Desk", href: "/#contact" },
+  { label: "Secure Dispatch", href: "/#contact" },
+];
+
+const legalLinks = [
+  { label: "Privacy", href: "/#contact" },
+  { label: "Terms", href: "/#contact" },
+  { label: "Assay Reports", href: "/certifications" },
+];
 
 export default function Footer() {
   const pathname = usePathname();
+  const router = useRouter();
 
   if (pathname && pathname.startsWith('/admin')) {
     return null;
   }
+
+  const scrollToSection = (id: string) => {
+    let attempts = 0;
+    const tryScroll = () => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+      } else if (attempts < 40) {
+        attempts += 1;
+        window.setTimeout(tryScroll, 50);
+      }
+    };
+    window.setTimeout(tryScroll, 50);
+  };
+
+  const handleSectionClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    const id = href.replace(/^\/#/, "");
+    if (!id || pathname === "/") return;
+    e.preventDefault();
+    router.push(href);
+    scrollToSection(id);
+  };
+
+  const renderLinks = (links: { label: string; href: string }[]) =>
+    links.map((link) => (
+      <li key={link.label}>
+        <Link
+          href={link.href}
+          onClick={link.href.startsWith("/#") ? (e) => handleSectionClick(e, link.href) : undefined}
+          className="hover:text-[var(--tarius-champagne)] transition-colors"
+        >
+          {link.label}
+        </Link>
+      </li>
+    ));
 
   return (
     <footer className="bg-[var(--tarius-graphite)] text-[var(--tarius-white)] border-t border-white/10 pt-20 pb-12">
@@ -20,7 +75,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-16 pb-16 border-b border-white/10">
           <div className="md:col-span-6 flex flex-col items-center md:items-start text-center md:text-left w-full">
             <div className="flex justify-center md:justify-start items-center md:items-start w-full !ml-0 !pl-0">
-              <a href="#" className="inline-block hover:opacity-80 transition-opacity !m-0 !p-0 text-center md:text-left" aria-label="TARIUS home">
+              <Link href="/" className="inline-block hover:opacity-80 transition-opacity !m-0 !p-0 text-center md:text-left" aria-label="TARIUS home">
                 <Image
                   src="/TARIUS_FOOTER_LOGO.png"
                   alt="TARIUS"
@@ -28,7 +83,7 @@ export default function Footer() {
                   height={400}
                   className="h-20 md:h-32 w-auto object-contain brightness-0 invert !m-0 !p-0 block mx-auto md:mx-0"
                 />
-              </a>
+              </Link>
             </div>
             <p className="text-xs uppercase tracking-widest text-stone-400 max-w-sm leading-relaxed mb-8 text-center md:text-left">
               Pure botanical extracts and micro-batch reserves cultivated for the uncompromising sanctuary.
@@ -43,25 +98,19 @@ export default function Footer() {
             <div className="text-left">
               <span className="text-[var(--tarius-champagne)] block mb-4 text-[10px]">Collection</span>
               <ul className="space-y-3 font-light text-stone-400">
-                <li><a href="#story" className="hover:text-[var(--tarius-champagne)] transition-colors">Genesis</a></li>
-                <li><a href="#provenance" className="hover:text-[var(--tarius-champagne)] transition-colors">Provenance</a></li>
-                <li><a href="#faq" className="hover:text-[var(--tarius-champagne)] transition-colors">Inquiries</a></li>
+                {renderLinks(collectionLinks)}
               </ul>
             </div>
             <div className="text-left">
               <span className="text-[var(--tarius-champagne)] block mb-4 text-[10px]">Concierge</span>
               <ul className="space-y-3 font-light text-stone-400">
-                <li><a href="#concierge" className="hover:text-[var(--tarius-champagne)] transition-colors">Private Allocation</a></li>
-                <li><a href="#concierge" className="hover:text-[var(--tarius-champagne)] transition-colors">Advisory Desk</a></li>
-                <li><a href="#concierge" className="hover:text-[var(--tarius-champagne)] transition-colors">Secure Dispatch</a></li>
+                {renderLinks(conciergeLinks)}
               </ul>
             </div>
             <div className="text-left">
               <span className="text-[var(--tarius-champagne)] block mb-4 text-[10px]">Legal</span>
               <ul className="space-y-3 font-light text-stone-400">
-                <li><a href="#" className="hover:text-[var(--tarius-champagne)] transition-colors">Privacy</a></li>
-                <li><a href="#" className="hover:text-[var(--tarius-champagne)] transition-colors">Terms</a></li>
-                <li><a href="#" className="hover:text-[var(--tarius-champagne)] transition-colors">Assay Reports</a></li>
+                {renderLinks(legalLinks)}
               </ul>
             </div>
           </div>
