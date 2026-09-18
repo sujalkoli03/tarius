@@ -48,6 +48,7 @@ export default function AdminLayout({
     { name: 'FAQs', href: '/admin/faqs' },
     { name: 'Inquiries', href: '/admin/inquiries' },
     { name: 'Layout', href: '/admin/settings' },
+    { name: 'Theme', href: '/admin/theme' },
   ];
 
   const handleSignOut = async () => {
