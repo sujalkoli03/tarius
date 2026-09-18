@@ -1,25 +1,40 @@
+// Filename: src/components/navbar/Navbar.tsx
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { scrollToSection, scrollToTop } from "@/lib/scroll";
 import { useScrollSpy } from "@/lib/useScrollSpy";
-
-const navigation = [
-  { label: "Shop", href: "/products" },
-  { label: "Our Story", href: "/#story" },
-  { label: "Quality", href: "/#quality" },
-  { label: "Certifications", href: "/certifications" },
-  { label: "FAQ", href: "/#faq" },
-];
+import { supabase } from "@/lib/api";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [navData, setNavData] = useState({ 
+    links: [
+      { label: "Shop", href: "/products" },
+      { label: "Our Story", href: "/#story" },
+      { label: "Quality", href: "/#quality" },
+      { label: "Certifications", href: "/certifications" },
+      { label: "FAQ", href: "/#faq" },
+    ], 
+    ctaText: 'Explore TARIUS', 
+    ctaLink: '/#contact' 
+  });
+  
   const pathname = usePathname();
   const router = useRouter();
   const activeSection = useScrollSpy();
+
+  useEffect(() => {
+    async function fetchNav() {
+      const { data } = await supabase.from('SiteSettings').select('value').eq('key', 'navbar_settings').single();
+      if (data && data.value) setNavData(data.value);
+    }
+    fetchNav();
+  }, []);
 
   const closeMenu = () => {
     setIsMenuOpen(false);
@@ -58,7 +73,7 @@ export default function Navbar() {
         <Link
           href="/"
           onClick={handleLogoClick}
-          className="flex items-center"
+          className="flex items-center hover:opacity-80 transition-opacity"
           aria-label="TARIUS home"
         >
           <Image
@@ -73,7 +88,7 @@ export default function Navbar() {
 
         {/* Desktop Navigation */}
         <div className="hidden items-center gap-8 lg:flex">
-          {navigation.map((item) => {
+          {navData.links && navData.links.map((item: any) => {
             const sectionId = item.href.startsWith("/#")
               ? item.href.replace(/^\/#/, "")
               : null;
@@ -92,11 +107,11 @@ export default function Navbar() {
           })}
 
           <Link
-            href="/#contact"
-            onClick={(e) => handleSectionClick(e, "/#contact")}
+            href={navData.ctaLink || "/#contact"}
+            onClick={(e) => { if (navData.ctaLink?.startsWith("/#")) handleSectionClick(e, navData.ctaLink); }}
             className="btn-tarius ml-2"
           >
-            Explore TARIUS
+            {navData.ctaText}
           </Link>
         </div>
 
@@ -127,7 +142,7 @@ export default function Navbar() {
         className={"overflow-hidden border-t border-[var(--tarius-border)] bg-[var(--tarius-ivory)] transition-[max-height,opacity] duration-300 lg:hidden " + (isMenuOpen ? "max-h-[420px] opacity-100" : "max-h-0 opacity-0")}
       >
         <div className="container-tarius flex flex-col py-5">
-          {navigation.map((item) => {
+          {navData.links && navData.links.map((item: any) => {
             const sectionId = item.href.startsWith("/#")
               ? item.href.replace(/^\/#/, "")
               : null;
@@ -146,11 +161,11 @@ export default function Navbar() {
           })}
 
           <Link
-            href="/#contact"
-            onClick={(e) => { closeMenu(); handleSectionClick(e, "/#contact"); }}
-            className="btn-tarius mt-5 w-full"
+            href={navData.ctaLink || "/#contact"}
+            onClick={(e) => { closeMenu(); if (navData.ctaLink?.startsWith("/#")) handleSectionClick(e, navData.ctaLink); }}
+            className="btn-tarius mt-5 w-full text-center"
           >
-            Explore TARIUS
+            {navData.ctaText}
           </Link>
         </div>
       </div>

@@ -47,6 +47,7 @@ export default function AdminLayout({
     { name: 'Certifications', href: '/admin/certifications-builder', isExternal: true }, 
     { name: 'FAQs', href: '/admin/faqs' },
     { name: 'Inquiries', href: '/admin/inquiries' },
+    { name: 'Layout', href: '/admin/settings' },
   ];
 
   const handleSignOut = async () => {
