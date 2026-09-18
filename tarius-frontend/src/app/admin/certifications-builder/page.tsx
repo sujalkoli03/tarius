@@ -20,6 +20,7 @@ interface PageTemplate {
   id: string;
   name: string;
   is_live: boolean;
+  is_archived: boolean;
 }
 
 export default function AdminFullscreenCertifications() {
@@ -109,16 +110,15 @@ export default function AdminFullscreenCertifications() {
   const initializeBuilder = async () => {
     setLoading(true);
     
-    // 1. Fetch the list of available templates
+    // Fetch with is_archived status
     const { data: templateList, error: listError } = await supabase
       .from('CertificationsTemplates')
-      .select('id, name, is_live')
+      .select('id, name, is_live, is_archived')
       .order('created_at', { ascending: false });
 
     if (templateList && templateList.length > 0) {
       setTemplates(templateList);
       
-      // 2. Find the live template (or default to the first one) to load initially
       const liveTemplate = templateList.find(t => t.is_live) || templateList[0];
       await loadTemplateBlocks(liveTemplate.id);
     }
@@ -184,7 +184,8 @@ export default function AdminFullscreenCertifications() {
         {
           name: newTemplateName,
           blocks: blocks,
-          is_live: false
+          is_live: false,
+          is_archived: false
         }
       ])
       .select()
@@ -193,8 +194,7 @@ export default function AdminFullscreenCertifications() {
     if (error || !data) {
       alert("Failed to create new template.");
     } else {
-      // Refresh the template list and switch to the newly created one
-      const { data: updatedList } = await supabase.from('CertificationsTemplates').select('id, name, is_live').order('created_at', { ascending: false });
+      const { data: updatedList } = await supabase.from('CertificationsTemplates').select('id, name, is_live, is_archived').order('created_at', { ascending: false });
       if (updatedList) setTemplates(updatedList);
       setActiveTemplateId(data.id);
       alert("New template created and loaded into the canvas.");
@@ -214,15 +214,14 @@ export default function AdminFullscreenCertifications() {
       process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] as string
     );
 
-    // 1. Remove the is_live flag from all templates
     await supabaseAuth.from('CertificationsTemplates').update({ is_live: false }).neq('id', '00000000-0000-0000-0000-000000000000');
 
-    // 2. Update blocks and set is_live = true for the active template
     const { error } = await supabaseAuth
       .from('CertificationsTemplates')
       .update({ 
         blocks: blocks,
         is_live: true,
+        is_archived: false,
         updated_at: new Date().toISOString()
       })
       .eq('id', activeTemplateId);
@@ -230,10 +229,65 @@ export default function AdminFullscreenCertifications() {
     if (error) {
       alert("Failed to publish layout.");
     } else {
-      // Refresh template list to update the (LIVE) badge visually
-      const { data: updatedList } = await supabase.from('CertificationsTemplates').select('id, name, is_live').order('created_at', { ascending: false });
+      const { data: updatedList } = await supabase.from('CertificationsTemplates').select('id, name, is_live, is_archived').order('created_at', { ascending: false });
       if (updatedList) setTemplates(updatedList);
       alert("Page updated successfully! This template is now live.");
+    }
+    setIsSaving(false);
+  };
+
+  const handleArchiveTemplate = async () => {
+    const template = templates.find(t => t.id === activeTemplateId);
+    if (!template || template.is_live) return;
+    if (!window.confirm("Archive \"" + template.name + "\"? It will be hidden from normal operations but can still be safely deleted later.")) return;
+
+    setIsSaving(true);
+    const supabaseAuth = createBrowserClient(
+      process.env['NEXT_PUBLIC_SUPABASE_URL'] as string,
+      process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] as string
+    );
+
+    const { error } = await supabaseAuth
+      .from('CertificationsTemplates')
+      .update({ is_archived: true, updated_at: new Date().toISOString() })
+      .eq('id', activeTemplateId);
+
+    if (!error) {
+      const { data: updatedList } = await supabase.from('CertificationsTemplates').select('id, name, is_live, is_archived').order('created_at', { ascending: false });
+      if (updatedList) setTemplates(updatedList);
+      alert("Template archived safely.");
+    } else {
+      alert("Failed to archive template.");
+    }
+    setIsSaving(false);
+  };
+
+  const handleDeleteTemplate = async () => {
+    const template = templates.find(t => t.id === activeTemplateId);
+    if (!template || !template.is_archived) return;
+    if (!window.confirm("PERMANENTLY DELETE \"" + template.name + "\"? This action cannot be undone.")) return;
+
+    setIsSaving(true);
+    const supabaseAuth = createBrowserClient(
+      process.env['NEXT_PUBLIC_SUPABASE_URL'] as string,
+      process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] as string
+    );
+
+    const { error } = await supabaseAuth
+      .from('CertificationsTemplates')
+      .delete()
+      .eq('id', activeTemplateId);
+
+    if (!error) {
+      const { data: updatedList } = await supabase.from('CertificationsTemplates').select('id, name, is_live, is_archived').order('created_at', { ascending: false });
+      if (updatedList && updatedList.length > 0) {
+        setTemplates(updatedList);
+        const liveOrFirst = updatedList.find(t => t.is_live) || updatedList[0];
+        await loadTemplateBlocks(liveOrFirst.id);
+      }
+      alert("Template permanently deleted.");
+    } else {
+      alert("Failed to delete template.");
     }
     setIsSaving(false);
   };
@@ -483,6 +537,8 @@ export default function AdminFullscreenCertifications() {
     );
   }
 
+  const currentTemplate = templates.find(t => t.id === activeTemplateId);
+
   return (
     <div className="bg-[var(--tarius-ivory)] min-h-screen font-body flex flex-col w-full absolute top-0 left-0 right-0 z-50">
       
@@ -511,17 +567,39 @@ export default function AdminFullscreenCertifications() {
             >
               {templates.map(t => (
                 <option key={t.id} value={t.id}>
-                  {t.name} {t.is_live ? " (LIVE)" : ""}
+                  {t.name} {t.is_live ? " (LIVE)" : (t.is_archived ? " (ARCHIVED)" : "")}
                 </option>
               ))}
             </select>
             <button 
               onClick={handleSaveAsNew} 
-              className="px-3 py-2 text-[10px] uppercase tracking-widest text-stone-500 hover:bg-stone-200 transition-colors" 
+              className="px-3 py-2 text-[10px] uppercase tracking-widest text-stone-500 hover:bg-stone-200 transition-colors border-r border-[var(--tarius-border)]" 
               title="Clone as New Template"
             >
               + Clone
             </button>
+
+            {/* Archive Button */}
+            {currentTemplate && !currentTemplate.is_live && !currentTemplate.is_archived && (
+              <button 
+                onClick={handleArchiveTemplate} 
+                className="px-3 py-2 text-[10px] uppercase tracking-widest text-orange-600 hover:bg-orange-100 transition-colors border-r border-[var(--tarius-border)]" 
+                title="Archive Template"
+              >
+                Archive
+              </button>
+            )}
+
+            {/* Delete Button (Only visible when archived) */}
+            {currentTemplate && currentTemplate.is_archived && (
+              <button 
+                onClick={handleDeleteTemplate} 
+                className="px-3 py-2 text-[10px] uppercase tracking-widest text-red-600 hover:bg-red-100 transition-colors" 
+                title="Delete Template"
+              >
+                Delete
+              </button>
+            )}
           </div>
         </div>
 
@@ -556,7 +634,6 @@ export default function AdminFullscreenCertifications() {
             </optgroup>
           </select>
 
-          {/* Save Draft */}
           <button 
             onClick={handleSaveDraft} 
             disabled={isSaving || processingMediaId !== null} 
@@ -565,10 +642,9 @@ export default function AdminFullscreenCertifications() {
             {isSaving ? 'Saving...' : 'Save Draft'}
           </button>
 
-          {/* Publish to Live */}
           <button 
             onClick={handlePublishLive} 
-            disabled={isSaving || processingMediaId !== null} 
+            disabled={isSaving || processingMediaId !== null || currentTemplate?.is_archived} 
             className="w-full sm:w-auto px-6 py-2 bg-[var(--tarius-olive)] text-white text-[10px] uppercase tracking-widest hover:bg-[var(--tarius-graphite)] transition-colors disabled:opacity-50 rounded-sm"
           >
             Publish to Live
